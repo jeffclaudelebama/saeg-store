@@ -1,0 +1,98 @@
+<!-- wp:template {"slug":"page","templateName":"Page"} -->
+
+<!-- wp:template-part {"slug":"header"} /-->
+
+<!-- wp:group {"align":"full","layout":{"type":"constrained"},"className":"page-wrapper"} -->
+<main class="wp-block-group alignfull page-wrapper">
+    
+    <!-- Page Header -->
+    <!-- wp:group {"align":"full","backgroundColor":"primary","layout":{"inherit":true},"className":"page-header"} -->
+    <header class="wp-block-group alignfull page-header">
+        <!-- wp:heading {"level":1,"fontSize":"4xl"} -->
+        <h1 class="wp-block-heading" style="color: #ffffff; font-size: 2.5rem; margin: 0;">
+            <?php the_title(); ?>
+        </h1>
+        <!-- /wp:heading -->
+    </header>
+    <!-- /wp:group -->
+    
+    <!-- Page Content -->
+    <!-- wp:group {"layout":{"type":"constrained"},"className":"page-content"} -->
+    <article class="wp-block-group page-content">
+        
+        <!-- Featured Image -->
+        <!-- wp:html -->
+        <?php
+        if ( has_post_thumbnail() ) {
+            echo '<div class="page-featured-image">';
+            the_post_thumbnail( 'saeg-featured' );
+            echo '</div>';
+        }
+        ?>
+        <!-- /wp:html -->
+        
+        <!-- Content -->
+        <!-- wp:html -->
+        <?php the_content(); ?>
+        <!-- /wp:html -->
+        
+    </article>
+    <!-- /wp:group -->
+    
+</main>
+
+<!-- wp:template-part {"slug":"footer"} /-->
+
+<!-- Styles -->
+<style>
+.page-wrapper {
+    background-color: var(--color-white);
+}
+
+.page-header {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #006926 100%);
+    color: var(--color-white);
+    padding: var(--spacing-3xl) var(--spacing-xl);
+    margin-bottom: var(--spacing-3xl);
+}
+
+.page-content {
+    padding: 0 var(--spacing-xl) var(--spacing-3xl);
+}
+
+.page-featured-image {
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.page-featured-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.page-content img {
+    max-width: 100%;
+    height: auto;
+    margin: var(--spacing-xl) 0;
+    border-radius: var(--radius-lg);
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        padding: var(--spacing-2xl) var(--spacing-md);
+    }
+    
+    .page-content {
+        padding: 0 var(--spacing-md) var(--spacing-2xl);
+    }
+    
+    .page-featured-image {
+        height: 250px;
+    }
+}
+</style>
+<!-- /wp:template -->

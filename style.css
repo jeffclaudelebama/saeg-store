@@ -1,0 +1,277 @@
+/*
+Theme Name: SAEG La Boutique
+Theme URI: https://github.com/yourusername/saeg-la-boutique
+Author: Your Name
+Author URI: https://example.com
+Description: WordPress Block Theme for SAEG | La Boutique - e-commerce site with WooCommerce support
+Version: 1.0.0
+License: GPL v3 or later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain: saeg-la-boutique
+Domain Path: /languages
+Requires at least: 6.2
+Requires PHP: 7.4
+Template Tags: e-commerce, woocommerce, blog, responsive-layout
+*/
+
+/* 
+==============================================
+SAEG La Boutique - Root Styles
+==============================================
+*/
+
+:root {
+  /* Colors */
+  --color-primary: #00571a;
+  --color-primary-light: #03BC42;
+  --color-accent: #FED202;
+  --color-neutral-50: #f9fafb;
+  --color-neutral-100: #f3f4f6;
+  --color-neutral-200: #e5e7eb;
+  --color-neutral-300: #d1d5db;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #4b5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1f2937;
+  --color-neutral-900: #111827;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-error: #dc2626;
+  --color-success: #16a34a;
+  --color-warning: #ea580c;
+  
+  /* Typography */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-family-display: "Inter", sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-3xl: 4rem;
+  --spacing-4xl: 6rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Normalize base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family-base);
+  background-color: var(--color-white);
+  color: var(--color-neutral-900);
+  line-height: 1.6;
+}
+
+/* Override default WordPress block editor margins */
+.wp-block[data-type] {
+  margin: 0 !important;
+}
+
+/* Responsive containers */
+.wp-block-group {
+  max-width: var(--wp--custom--container-width, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Image adjustments */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Link styles */
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary-light);
+}
+
+/* Button styles */
+.wp-block-button__link {
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.wp-block-button.is-style-fill .wp-block-button__link {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.wp-block-button.is-style-fill .wp-block-button__link:hover {
+  background-color: var(--color-primary-light);
+}
+
+.wp-block-button.is-style-outline .wp-block-button__link {
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.wp-block-button.is-style-outline .wp-block-button__link:hover {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-display);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: var(--spacing-lg);
+}
+
+h1 { font-size: 2.25rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
+
+/* Mobile typography */
+@media (max-width: 768px) {
+  h1 { font-size: 1.875rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+}
+
+/* Lists */
+ul, ol {
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-xl);
+}
+
+li {
+  margin-bottom: var(--spacing-md);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--spacing-lg);
+}
+
+th, td {
+  padding: var(--spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-neutral-200);
+}
+
+th {
+  background-color: var(--color-neutral-100);
+  font-weight: 600;
+}
+
+/* Forms */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--color-neutral-300);
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(0, 87, 26, 0.1);
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  body {
+    font-size: 0.875rem;
+  }
+  
+  h1 { font-size: 1.75rem; }
+}
+
+/* WooCommerce specific styles */
+.woocommerce-product {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.woocommerce-product__image {
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-neutral-100);
+}
+
+.woocommerce-product__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.woocommerce-product__title {
+  fonf-size: 1rem;
+  font-weight: 600;
+  margin: var(--spacing-md) 0;
+}
+
+.woocommerce-product__price {
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.woocommerce-product__rating {
+  margin: var(--spacing-sm) 0;
+  color: var(--color-accent);
+}
+
+.woocommerce-product__add-to-cart {
+  margin-top: auto;
+  padding-top: var(--spacing-md);
+}
+
+/* Print styles */
+@media print {
+  .wp-block-navigation,
+  .wp-block-search,
+  .wp-block-social-links {
+    display: none;
+  }
+}

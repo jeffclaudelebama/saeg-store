@@ -1,0 +1,252 @@
+/**
+ * WP Neutralize CSS - Gutenberg Block Reset
+ * Disables WordPress Full Site Editing defaults to allow Stitch design to shine
+ * This CSS has HIGHEST PRIORITY and must be loaded first
+ */
+
+/* ====== GLOBAL RESETS ====== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Remove default WordPress margins/paddings that conflict with Stitch */
+.wp-site-blocks {
+  margin: 0;
+  padding: 0;
+}
+
+/* ====== BLOCK RESETS ====== */
+
+/* Gutenberg adds default margins; remove them */
+.wp-block-group,
+.wp-block-columns,
+.wp-block-column,
+.wp-block-section {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Remove default paragraph spacing */
+.wp-block-paragraph {
+  margin: 0 !important;
+  line-height: inherit;
+  font-size: inherit;
+}
+
+/* Remove heading defaults */
+.wp-block-heading {
+  margin: 0 !important;
+  line-height: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  padding: 0;
+  line-height: inherit;
+}
+
+/* Remove list defaults */
+.wp-block-list,
+ul, ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+li {
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove button defaults */
+.wp-block-button__link,
+button {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Remove link defaults */
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/* Remove image defaults */
+.wp-block-image img,
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Remove quote defaults */
+.wp-block-quote {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.wp-block-quote p {
+  margin: 0;
+}
+
+/* ====== LAYOUT NEUTRALIZATION ====== */
+
+/* Remove WooCommerce default spacing */
+.woocommerce,
+.woocommerce-page {
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove WordPress core theme spacing */
+.wp-block-template-part {
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent Gutenberg from adding unnecessary max-widths */
+.wp-block-container {
+  max-width: none !important;
+}
+
+/* Reset column gaps */
+.wp-block-columns {
+  gap: 0 !important;
+}
+
+.wp-block-column {
+  flex-basis: auto !important;
+}
+
+/* ====== TYPOGRAPHY RESETS ====== */
+
+/* Ensure consistent font family (override WordPress theme defaults) */
+html, body, input, button, textarea, select {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* Prevent WordPress from enforcing line-height */
+body {
+  line-height: normal;
+}
+
+/* Remove theme-level font defaults */
+.site, .site-content {
+  line-height: inherit;
+  font-size: inherit;
+}
+
+/* ====== FORM RESETS ====== */
+
+input, textarea, select {
+  all: unset;
+  display: block;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  font-family: inherit;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: #00571a;
+  box-shadow: 0 0 0 3px rgba(0, 87, 26, 0.1);
+}
+
+/* ====== HIDE UNNECESSARY WORDPRESS ELEMENTS ====== */
+
+/* Hide admin bar if visible on frontend */
+.wp-admin-bar {
+  display: none !important;
+}
+
+/* Hide Gutenberg formatting marks */
+[data-block] {
+  position: relative;
+}
+
+/* ====== ACCESSIBILITY ====== */
+
+/* Ensure focus states are visible */
+:focus-visible {
+  outline: 2px solid #00571a;
+  outline-offset: 2px;
+}
+
+/* Remove outline from elements that handle it themselves */
+button:focus-visible,
+a:focus-visible {
+  outline: none;
+}
+
+/* ====== RESPONSIVE ====== */
+
+/* Reset responsive behaviors from themes */
+@media (max-width: 768px) {
+  .wp-block-columns {
+    flex-direction: column;
+    gap: 0 !important;
+  }
+
+  .wp-block-column {
+    flex-basis: 100% !important;
+    margin-bottom: 0 !important;
+  }
+}
+
+/* ====== CRITICAL OVERRIDES ====== */
+
+/* Ensure Stitch classes take precedence */
+[class*="bg-"],
+[class*="text-"],
+[class*="px-"],
+[class*="py-"],
+[class*="flex-"],
+[class*="grid-"],
+[class*="rounded"] {
+  all: revert;
+}
+
+/* Prevent WordPress theme stylesheet interference */
+.wp-site-blocks::before,
+.wp-site-blocks::after {
+  display: none;
+}

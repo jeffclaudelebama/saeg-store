@@ -1,0 +1,59 @@
+<!-- wp:html -->
+<header class="sticky top-0 z-50 bg-white border-b border-slate-100 px-4 md:px-10 py-3">
+  <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+    <!-- Logo and Navigation -->
+    <div class="flex items-center gap-8">
+      <!-- Logo -->
+      <a class="flex items-center" href="<?php echo home_url(); ?>">
+        <img 
+          alt="Logo SAEG" 
+          class="h-10 w-auto" 
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuVoiYdla0g8CVO1wRdTwjpbNx_8diDQnD3ghelplODt2g_xo6hzYMX1UMLR7Ie0DOd7lb2PPI8a6aJJeeeS6joxQ6c8_Nj5rWWkIXDLthXLlTBc5lyS-plc8OOUdvpVvLQtJ1EbfF-t7LCPgnTGcBEFC41hdGt7EqAxPxeBuG_rOziEyJWrMyyleQCnag-cVSdkfzQHEHvmwxxcSHY0D8DVJmDK31_EK7j-5dr5jP09apUiexC9OcFlb_4e60GOCVq7dbWbsxWVJH"
+        />
+      </a>
+
+      <!-- Navigation Menu -->
+      <nav class="hidden md:flex items-center gap-8">
+        <a class="text-slate-900 text-sm font-semibold hover:text-primary transition-colors" href="<?php echo wc_get_page_permalink( 'shop' ); ?>">
+          Boutique
+        </a>
+        <a class="text-slate-900 text-sm font-semibold hover:text-primary transition-colors" href="#categories">
+          Catégories
+        </a>
+        <a class="text-slate-900 text-sm font-semibold hover:text-primary transition-colors" href="<?php echo home_url( '/contact' ); ?>">
+          Contact
+        </a>
+      </nav>
+    </div>
+
+    <!-- Right Side: Search, Cart, Profile -->
+    <div class="flex flex-1 justify-end items-center gap-4">
+      <!-- Search Bar (Desktop) -->
+      <div class="hidden lg:flex relative w-full max-w-xs">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+        <input 
+          class="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded text-sm focus:ring-1 focus:ring-primary" 
+          placeholder="Rechercher un produit..." 
+          type="text"
+          id="header-search"
+        />
+      </div>
+
+      <!-- Cart Button -->
+      <button class="relative p-2 text-slate-700 hover:bg-slate-50 rounded" id="cart-toggle">
+        <span class="material-symbols-outlined">shopping_cart</span>
+        <span class="absolute top-0 right-0 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" id="cart-count">0</span>
+      </button>
+
+      <!-- Profile Avatar -->
+      <div class="h-8 w-8 rounded-full bg-slate-200 overflow-hidden">
+        <img 
+          class="w-full h-full object-cover" 
+          src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4GKsdj_1q8zUe1tN5S4oqq3TvhPt-YYQf1YvlPpaE8Ncmz1AmShNsPBs2_B6idhdf9QSmyF6UKOL_EIhFN5B4p96DxFU1XzoW6mreBZl8MGUFIVi3py5gxZzmc4etkMcaOQPR-gPwmqDew3Tck0h0_lE8AGDO2Tdnyxd8pE3bRuKVh2SOWOOzgZtD0f9EmGIu8AkGlut6Ao9YVdXz86h22ORkMIr8zy4rdEq7XMZ6kTkYVMSA5Scc88gOCRQyB7ilAo7-uHSd5V_U"
+          alt="User profile"
+        />
+      </div>
+    </div>
+  </div>
+</header>
+<!-- /wp:html -->

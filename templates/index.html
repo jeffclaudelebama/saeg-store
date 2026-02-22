@@ -1,0 +1,395 @@
+<!-- wp:template {"slug":"index","templateName":"Index"} -->
+
+<!-- wp:template-part {"slug":"header"} /-->
+
+<!-- wp:group {"align":"full","layout":{"type":"constrained"},"className":"blog-wrapper"} -->
+<main class="wp-block-group alignfull blog-wrapper">
+    
+    <!-- Page Header -->
+    <!-- wp:group {"align":"full","backgroundColor":"primary","layout":{"inherit":true},"className":"page-header"} -->
+    <header class="wp-block-group alignfull page-header" data-page-type="index">
+        <!-- wp:heading {"level":1,"fontSize":"4xl","className":"page-title"} -->
+        <h1 class="wp-block-heading page-title has-primary-color has-text-color" style="color: #ffffff; font-size: 2.5rem">
+            <?php
+            if ( is_home() ) {
+                bloginfo( 'name' );
+            } else {
+                the_archive_title();
+            }
+            ?>
+        </h1>
+        <!-- /wp:heading -->
+        
+        <!-- Breadcrumbs -->
+        <!-- wp:html -->
+        <?php echo saeg_get_breadcrumbs(); ?>
+        <!-- /wp:html -->
+    </header>
+    <!-- /wp:group -->
+    
+    <!-- Posts Container -->
+    <!-- wp:group {"layout":{"type":"flex"},"align":"full"} -->
+    <div class="wp-block-group alignfull posts-container">
+        
+        <!-- Posts Sidebar/Main -->
+        <!-- wp:group {"className":"posts-main"} -->
+        <article class="wp-block-group posts-main">
+            
+            <!-- Posts Loop -->
+            <!-- wp:html -->
+            <?php
+            if ( have_posts() ) {
+                while ( have_posts() ) {
+                    the_post();
+                    ?>
+                    <article class="post-card">
+                        <?php if ( has_post_thumbnail() ) { ?>
+                            <div class="post-image">
+                                <a href="<?php the_permalink(); ?>">
+                                    <?php
+                                    the_post_thumbnail( 'saeg-featured', array(
+                                        'alt' => get_the_title(),
+                                        'class' => 'post-thumbnail'
+                                    ) );
+                                    ?>
+                                </a>
+                            </div>
+                        <?php } ?>
+                        
+                        <div class="post-content">
+                            <div class="post-meta">
+                                <time class="post-date" datetime="<?php echo esc_attr( get_the_date( 'c' ) ); ?>">
+                                    <?php echo esc_html( get_the_date() ); ?>
+                                </time>
+                                <span class="post-author">
+                                    <?php echo __( 'by ', 'saeg-la-boutique' ); ?>
+                                    <a href="<?php echo esc_url( get_author_posts_url( get_the_author_meta( 'ID' ) ) ); ?>">
+                                        <?php the_author(); ?>
+                                    </a>
+                                </span>
+                                
+                                <?php
+                                $categories = get_the_category();
+                                if ( ! empty( $categories ) ) {
+                                    echo '<span class="post-categories">';
+                                    foreach ( $categories as $category ) {
+                                        echo '<a href="' . esc_url( get_category_link( $category->term_id ) ) . '">' . esc_html( $category->name ) . '</a>';
+                                    }
+                                    echo '</span>';
+                                }
+                                ?>
+                            </div>
+                            
+                            <h2 class="post-title">
+                                <a href="<?php the_permalink(); ?>">
+                                    <?php the_title(); ?>
+                                </a>
+                            </h2>
+                            
+                            <p class="post-excerpt">
+                                <?php
+                                if ( has_excerpt() ) {
+                                    the_excerpt();
+                                } else {
+                                    echo wp_trim_words( get_the_content(), 30 );
+                                }
+                                ?>
+                            </p>
+                            
+                            <a href="<?php the_permalink(); ?>" class="read-more">
+                                <?php _e( 'Read More →', 'saeg-la-boutique' ); ?>
+                            </a>
+                        </div>
+                    </article>
+                    <?php
+                }
+                
+                // Pagination
+                the_posts_pagination( array(
+                    'mid_size' => 2,
+                    'prev_text' => __( '← Previous', 'saeg-la-boutique' ),
+                    'next_text' => __( 'Next →', 'saeg-la-boutique' ),
+                ) );
+            } else {
+                echo '<p>' . __( 'No posts found.', 'saeg-la-boutique' ) . '</p>';
+            }
+            ?>
+            <!-- /wp:html -->
+            
+        </article>
+        <!-- /wp:group -->
+        
+        <!-- Sidebar -->
+        <!-- wp:group {"className":"posts-sidebar"} -->
+        <aside class="wp-block-group posts-sidebar">
+            <!-- wp:search /-->
+            
+            <!-- Widgets Area -->
+            <!-- wp:html -->
+            <?php
+            if ( is_active_sidebar( 'primary-sidebar' ) ) {
+                dynamic_sidebar( 'primary-sidebar' );
+            } else {
+                echo '<!-- Primary Sidebar Not Active -->';
+            }
+            ?>
+            <!-- /wp:html -->
+        </aside>
+        <!-- /wp:group -->
+        
+    </div>
+    <!-- /wp:group -->
+    
+</main>
+
+<!-- wp:template-part {"slug":"footer"} /-->
+
+<!-- Styles -->
+<style>
+.blog-wrapper {
+    background-color: var(--color-white);
+}
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #006926 100%);
+    color: var(--color-white);
+    padding: var(--spacing-3xl) var(--spacing-xl);
+    margin-bottom: var(--spacing-3xl);
+}
+
+.page-title {
+    margin: 0 0 var(--spacing-lg) 0;
+    font-weight: 800;
+}
+
+.breadcrumbs {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.875rem;
+}
+
+.breadcrumbs a {
+    color: var(--color-accent);
+}
+
+/* Posts Container */
+.posts-container {
+    gap: var(--spacing-2xl);
+    padding: 0 var(--spacing-xl) var(--spacing-3xl);
+}
+
+.posts-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.posts-sidebar {
+    flex: 0 0 300px;
+}
+
+.post-card {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-neutral-200);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--spacing-2xl);
+    display: grid;
+    grid-template-columns: 1fr;
+    transition: all 0.3s ease;
+}
+
+@media (min-width: 769px) {
+    .post-card {
+        grid-template-columns: 300px 1fr;
+    }
+}
+
+.post-card:hover {
+    box-shadow: var(--shadow-lg);
+    border-color: var(--color-neutral-300);
+}
+
+.post-image {
+    overflow: hidden;
+    background-color: var(--color-neutral-200);
+    max-height: 250px;
+}
+
+@media (min-width: 769px) {
+    .post-image {
+        max-height: none;
+        height: 100%;
+    }
+}
+
+.post-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.post-card:hover .post-thumbnail {
+    transform: scale(1.05);
+}
+
+.post-content {
+    padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+}
+
+.post-meta {
+    display: flex;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-md);
+    font-size: 0.875rem;
+    color: var(--color-neutral-600);
+}
+
+.post-date,
+.post-author,
+.post-categories {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.post-date a,
+.post-author a,
+.post-categories a {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.post-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: var(--spacing-md) 0;
+    line-height: 1.3;
+}
+
+.post-title a {
+    color: var(--color-neutral-900);
+}
+
+.post-title a:hover {
+    color: var(--color-primary);
+}
+
+.post-excerpt {
+    color: var(--color-neutral-700);
+    margin-bottom: var(--spacing-lg);
+    flex-grow: 1;
+}
+
+.read-more {
+    color: var(--color-primary);
+    font-weight: 600;
+    display: inline-block;
+    align-self: flex-start;
+}
+
+.read-more:hover {
+    color: var(--color-primary-light);
+}
+
+/* Pagination */
+.wp-pagenavi,
+.pagination {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-3xl) 0;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.wp-pagenavi a,
+.wp-pagenavi span,
+.pagination a,
+.pagination span {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border: 1px solid var(--color-neutral-300);
+    border-radius: var(--radius-lg);
+    color: var(--color-neutral-900);
+    background-color: var(--color-white);
+}
+
+.wp-pagenavi .current,
+.pagination .current {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    border-color: var(--color-primary);
+}
+
+.wp-pagenavi a:hover,
+.pagination a:hover {
+    background-color: var(--color-neutral-100);
+}
+
+/* Sidebar */
+.widget {
+    background-color: var(--color-neutral-50);
+    padding: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-2xl);
+}
+
+.widget-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--color-neutral-900);
+}
+
+.widget ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.widget li {
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--color-neutral-200);
+}
+
+.widget li:last-child {
+    border-bottom: none;
+}
+
+.widget a {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.widget a:hover {
+    color: var(--color-primary-light);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .posts-container {
+        flex-direction: column;
+        padding: 0 var(--spacing-md) var(--spacing-2xl);
+    }
+    
+    .posts-sidebar {
+        flex: auto;
+    }
+    
+    .post-card {
+        grid-template-columns: 1fr;
+    }
+    
+    .post-image {
+        max-height: 200px;
+    }
+    
+    .post-title {
+        font-size: 1.25rem;
+    }
+}
+</style>
+<!-- /wp:template -->

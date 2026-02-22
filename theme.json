@@ -1,0 +1,372 @@
+{
+  "$schema": "https://schemas.wp.org/wp/6.2/theme.json",
+  "version": 2,
+  "title": "SAEG | La Boutique",
+  "settings": {
+    "appearanceTools": true,
+    "color": {
+      "palette": [
+        {
+          "color": "#00571a",
+          "name": "Primary",
+          "slug": "primary"
+        },
+        {
+          "color": "#f5f8f6",
+          "name": "Background Light",
+          "slug": "background-light"
+        },
+        {
+          "color": "#0f2315",
+          "name": "Background Dark",
+          "slug": "background-dark"
+        },
+        {
+          "color": "#ffffff",
+          "name": "White",
+          "slug": "white"
+        },
+        {
+          "color": "#f8fafc",
+          "name": "Slate 50",
+          "slug": "slate-50"
+        },
+        {
+          "color": "#f1f5f9",
+          "name": "Slate 100",
+          "slug": "slate-100"
+        },
+        {
+          "color": "#e2e8f0",
+          "name": "Slate 200",
+          "slug": "slate-200"
+        },
+        {
+          "color": "#cbd5e1",
+          "name": "Slate 300",
+          "slug": "slate-300"
+        },
+        {
+          "color": "#94a3b8",
+          "name": "Slate 400",
+          "slug": "slate-400"
+        },
+        {
+          "color": "#64748b",
+          "name": "Slate 500",
+          "slug": "slate-500"
+        },
+        {
+          "color": "#475569",
+          "name": "Slate 600",
+          "slug": "slate-600"
+        },
+        {
+          "color": "#334155",
+          "name": "Slate 700",
+          "slug": "slate-700"
+        },
+        {
+          "color": "#1e293b",
+          "name": "Slate 800",
+          "slug": "slate-800"
+        },
+        {
+          "color": "#0f172a",
+          "name": "Slate 900",
+          "slug": "slate-900"
+        },
+        {
+          "color": "#dc2626",
+          "name": "Red 600",
+          "slug": "red-600"
+        },
+        {
+          "color": "#000000",
+          "name": "Black",
+          "slug": "black"
+        }
+      ],
+      "gradients": [
+        {
+          "name": "Primary to transparent",
+          "slug": "primary-to-transparent",
+          "gradient": "linear-gradient(to right, #00571a, transparent)"
+        },
+        {
+          "name": "Dark to transparent",
+          "slug": "dark-to-transparent",
+          "gradient": "linear-gradient(to bottom, rgba(15, 23, 42, 0.8), transparent)"
+        }
+      ]
+    },
+    "typography": {
+      "dropCap": false,
+      "fontFamilies": [
+        {
+          "fontFamily": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+          "name": "Inter",
+          "slug": "inter"
+        },
+        {
+          "fontFamily": "Georgia, serif",
+          "name": "Georgia",
+          "slug": "georgia"
+        }
+      ],
+      "fontSizes": [
+        {
+          "size": "0.75rem",
+          "name": "Extra Small",
+          "slug": "xs"
+        },
+        {
+          "size": "0.875rem",
+          "name": "Small",
+          "slug": "sm"
+        },
+        {
+          "size": "1rem",
+          "name": "Base",
+          "slug": "base"
+        },
+        {
+          "size": "1.125rem",
+          "name": "Large",
+          "slug": "lg"
+        },
+        {
+          "size": "1.25rem",
+          "name": "Extra Large",
+          "slug": "xl"
+        },
+        {
+          "size": "1.5rem",
+          "name": "2XL",
+          "slug": "2xl"
+        },
+        {
+          "size": "1.875rem",
+          "name": "3XL",
+          "slug": "3xl"
+        },
+        {
+          "size": "2.25rem",
+          "name": "4XL",
+          "slug": "4xl"
+        },
+        {
+          "size": "3.75rem",
+          "name": "6XL",
+          "slug": "6xl"
+        }
+      ]
+    },
+    "spacing": {
+      "spacingSizes": [
+        {
+          "size": "0.25rem",
+          "name": "XSmall",
+          "slug": "xs"
+        },
+        {
+          "size": "0.5rem",
+          "name": "Small",
+          "slug": "sm"
+        },
+        {
+          "size": "0.75rem",
+          "name": "Medium",
+          "slug": "md"
+        },
+        {
+          "size": "1rem",
+          "name": "Large",
+          "slug": "lg"
+        },
+        {
+          "size": "1.5rem",
+          "name": "XLarge",
+          "slug": "xl"
+        },
+        {
+          "size": "2rem",
+          "name": "2XLarge",
+          "slug": "2xl"
+        },
+        {
+          "size": "3rem",
+          "name": "3XLarge",
+          "slug": "3xl"
+        },
+        {
+          "size": "4rem",
+          "name": "4XLarge",
+          "slug": "4xl"
+        }
+      ]
+    },
+    "border": {
+      "radius": true
+    },
+    "dimensions": {
+      "aspectRatio": true
+    }
+  },
+  "styles": {
+    "color": {
+      "background": "#ffffff",
+      "text": "#0f172a"
+    },
+    "typography": {
+      "fontFamily": "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "fontSize": "1rem",
+      "fontWeight": "400",
+      "lineHeight": "1.6"
+    },
+    "elements": {
+      "h1": {
+        "typography": {
+          "fontSize": "3.75rem",
+          "fontWeight": "900",
+          "lineHeight": "1.1",
+          "letterSpacing": "-0.025em"
+        }
+      },
+      "h2": {
+        "typography": {
+          "fontSize": "1.875rem",
+          "fontWeight": "900",
+          "lineHeight": "1.2",
+          "letterSpacing": "-0.025em"
+        }
+      },
+      "h3": {
+        "typography": {
+          "fontSize": "1.125rem",
+          "fontWeight": "900",
+          "lineHeight": "1.3"
+        }
+      },
+      "h4": {
+        "typography": {
+          "fontSize": "1rem",
+          "fontWeight": "700"
+        }
+      },
+      "a": {
+        "color": {
+          "text": "#00571a"
+        }
+      },
+      "button": {
+        "color": {
+          "background": "#00571a",
+          "text": "#ffffff"
+        },
+        "typography": {
+          "fontWeight": "700"
+        }
+      }
+    },
+    "blocks": {
+      "core/button": {
+        "color": {
+          "background": "#00571a",
+          "text": "#ffffff"
+        },
+        "typography": {
+          "fontWeight": "700"
+        },
+        "spacing": {
+          "padding": {
+            "top": "1rem",
+            "right": "2rem",
+            "bottom": "1rem",
+            "left": "2rem"
+          }
+        }
+      },
+      "core/heading": {
+        "typography": {
+          "fontWeight": "900",
+          "letterSpacing": "-0.025em"
+        }
+      },
+      "core/paragraph": {
+        "typography": {
+          "lineHeight": "1.625"
+        }
+      },
+      "core/list": {
+        "spacing": {
+          "margin": {
+            "top": "1rem",
+            "bottom": "1rem"
+          }
+        }
+      },
+      "woocommerce/product-gallery": {
+        "spacing": {
+          "margin": {
+            "top": "0",
+            "right": "0",
+            "bottom": "1.5rem",
+            "left": "0"
+          }
+        }
+      },
+      "woocommerce/product-image": {
+        "spacing": {
+          "margin": {
+            "top": "0",
+            "right": "0",
+            "bottom": "0",
+            "left": "0"
+          }
+        }
+      },
+      "woocommerce/product-price": {
+        "typography": {
+          "fontSize": "1.25rem",
+          "fontWeight": "900"
+        },
+        "color": {
+          "text": "#00571a"
+        }
+      },
+      "woocommerce/product-title": {
+        "typography": {
+          "fontSize": "1.125rem",
+          "fontWeight": "700"
+        }
+      },
+      "woocommerce/product-button": {
+        "color": {
+          "background": "#00571a",
+          "text": "#ffffff"
+        },
+        "typography": {
+          "fontWeight": "700"
+        }
+      },
+      "woocommerce/product-rating": {
+        "color": {
+          "text": "#f59e0b"
+        }
+      }
+    }
+  },
+  "templateParts": [
+    {
+      "name": "header",
+      "title": "Header",
+      "area": "header"
+    },
+    {
+      "name": "footer",
+      "title": "Footer",
+      "area": "footer"
+    }
+  ]
+}
