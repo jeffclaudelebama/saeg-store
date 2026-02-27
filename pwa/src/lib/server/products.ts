@@ -5,6 +5,7 @@ import type { SaegProduct, SaegCategory } from '@/types/saeg';
 
 const PRODUCT_FALLBACK_IMAGE = '/og-default.png';
 const PRODUCTION_MEDIA_HOSTS = new Set(['admin.store.saeggabon.ga', 'store.saeggabon.ga']);
+const BLOCKED_PLACEHOLDER_HOSTS = new Set(['via.placeholder.com', 'placehold.co', 'dummyimage.com']);
 
 export async function getProductsServer(params?: { search?: string; category?: string; dailyOnly?: boolean; page?: number; perPage?: number }): Promise<SaegProduct[]> {
   const search = params?.search ? `&search=${encodeURIComponent(params.search)}` : '';
@@ -98,6 +99,9 @@ function normalizeImageUrl(raw: string): string | null {
 function normalizeAbsoluteImageUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
+    if (BLOCKED_PLACEHOLDER_HOSTS.has(parsed.hostname)) {
+      return PRODUCT_FALLBACK_IMAGE;
+    }
     const isLocalHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
     if (!isLocalHost && (env.siteUrl.startsWith('https://') || PRODUCTION_MEDIA_HOSTS.has(parsed.hostname)) && parsed.protocol === 'http:') {
       parsed.protocol = 'https:';
