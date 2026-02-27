@@ -1,0 +1,24 @@
+# Node
+node_modules
+.pnpm-store
+
+# Next.js
+.pwa/.next
+saeg-store/pwa/.next
+pwa/.next
+pwa/out
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# WordPress runtime (if installed in-repo later)
+wp/core/
+wp/uploads/
+wp/wp-content/uploads/
+
+# Logs
+*.log
+
+pwa/tsconfig.tsbuildinfo

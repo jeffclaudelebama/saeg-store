@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --saeg-green: #1b7f3a;
+  --saeg-dark: #0b2b16;
+  --saeg-yellow: #f2c94c;
+  --saeg-cream: #fff6e6;
+  --saeg-red: #d64545;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: Inter, sans-serif;
+  background: #f5f8f6;
+  color: #0f172a;
+}
+
+@media (max-width: 1023px) {
+  body {
+    padding-bottom: 84px;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  line-height: 1;
+}
+
+.container {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold transition-colors;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary/90;
+}
+
+.btn-ghost {
+  @apply border border-slate-200 bg-white text-slate-800 hover:bg-slate-50;
+}
+
+.btn-sm {
+  @apply px-3 py-2 text-sm;
+}
+
+.icon-btn {
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50;
+}
+
+.link-btn {
+  @apply text-sm font-semibold text-primary underline underline-offset-2;
+}
+
+.install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 86px;
+  z-index: 90;
+}
+
+@media (min-width: 1024px) {
+  .install-banner {
+    left: auto;
+    right: 24px;
+    bottom: 24px;
+    width: 380px;
+  }
+}
+
+.install-banner__content {
+  @apply rounded-2xl border border-primary/15 bg-white p-4 shadow-2xl;
+}
+
+.install-banner__eyebrow {
+  @apply text-xs font-bold uppercase tracking-widest text-primary/70;
+}
+
+.install-banner__title {
+  @apply mt-1 text-base font-extrabold text-slate-900;
+}
+
+.install-banner__text {
+  @apply mt-1 text-sm leading-relaxed text-slate-600;
+}
+
+.install-banner__steps {
+  @apply mt-2 list-decimal space-y-1 pl-5 text-xs text-slate-600;
+}
+
+.install-banner__actions {
+  @apply mt-3 flex gap-2;
+}
+
+.bottom-nav {
+  @apply fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white/95 backdrop-blur;
+}
+
+@media (min-width: 1024px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-nav__item {
+  @apply relative flex flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-slate-500;
+}
+
+.bottom-nav__item.is-active {
+  @apply text-primary;
+}
+
+.bottom-nav__badge {
+  @apply absolute right-3 top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] not-italic font-bold text-white;
+}
+
+.state-card {
+  @apply rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm;
+}
+
+.state-card--loading {
+  @apply animate-pulse;
+}
+
+.state-card--error {
+  @apply border-red-200 bg-red-50;
+}
+
+.page-shell {
+  @apply min-h-screen bg-background-light;
+}
+
+.page-shell__header {
+  @apply sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur;
+}
+
+.page-shell__bar {
+  @apply flex items-center gap-3 py-3;
+}
+
+.brand-pill {
+  @apply rounded-full bg-primary/10 px-3 py-1 text-xs font-black uppercase tracking-widest text-primary;
+}
+
+.brand-overline {
+  @apply text-xs font-bold uppercase tracking-widest text-primary/70;
+}
+
+.brand-title-block h1 {
+  @apply text-lg font-black tracking-tight text-slate-900;
+}
+
+.page-shell__subtitle {
+  @apply pb-3 text-sm text-slate-600;
+}
+
+.page-shell__main {
+  @apply py-6;
+}
+
+.product-card {
+  @apply overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition hover:shadow-lg;
+}
+
+.product-card__image-wrap {
+  @apply relative block aspect-[4/3] overflow-hidden bg-slate-100;
+}
+
+.product-card__image {
+  object-fit: cover;
+}
+
+.product-card:hover .product-card__image {
+  transform: scale(1.04);
+  transition: transform 0.35s ease;
+}
+
+.tag {
+  @apply absolute left-2 top-2 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider;
+}
+
+.tag--yellow {
+  @apply bg-amber-100 text-amber-800;
+}
+
+.tag--red {
+  @apply top-9 bg-red-100 text-red-700;
+}
+
+.product-card__body {
+  @apply p-4;
+}
+
+.product-card__category {
+  @apply text-xs font-semibold uppercase tracking-wider text-slate-400;
+}
+
+.product-card__title {
+  @apply mt-1 text-base font-bold text-slate-900;
+}
+
+.product-card__desc {
+  @apply mt-1 line-clamp-2 text-sm text-slate-500;
+}
+
+.product-card__meta {
+  @apply mt-4 flex items-center justify-between gap-2 text-sm;
+}
+
+.kg-selector {
+  @apply flex items-stretch gap-2;
+}
+
+.kg-selector__field {
+  @apply flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2;
+}
+
+.kg-selector__field span {
+  @apply block text-xs font-semibold uppercase tracking-wider text-slate-500;
+}
+
+.kg-selector__field input {
+  @apply mt-1 w-full border-none bg-transparent p-0 text-lg font-bold text-slate-900 outline-none focus:ring-0;
+}
+
+.sticky-cta {
+  @apply fixed bottom-[72px] left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur lg:static lg:border-none lg:bg-transparent lg:p-0;
+}
+
+.whatsapp-fab {
+  @apply fixed bottom-24 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-2xl transition hover:scale-110 lg:bottom-6 lg:right-6;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

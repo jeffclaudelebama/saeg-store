@@ -1,0 +1,12 @@
+{
+  "name": "saeg-store-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "dev": "pnpm --filter saeg-pwa dev",
+    "build": "pnpm --filter saeg-pwa build",
+    "start": "pnpm --filter saeg-pwa start",
+    "lint": "pnpm --filter saeg-pwa lint",
+    "typecheck": "pnpm --filter saeg-pwa typecheck"
+  }
+}
