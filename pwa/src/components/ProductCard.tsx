@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
+import { SafeImage } from '@/components/SafeImage';
 import { formatCurrency, formatKg, stripHtml } from '@/lib/format';
 import { useCart } from '@/providers/CartProvider';
 import type { SaegProduct } from '@/types/saeg';
@@ -9,16 +9,22 @@ import type { SaegProduct } from '@/types/saeg';
 export function ProductCard({ product }: { product: SaegProduct }) {
   const { addItem } = useCart();
   const price = product.sale_price || product.price || product.regular_price;
+  const primaryImageSrc = ((product as unknown as { images?: Array<string | { src?: string | null }> }).images?.[0] as
+    | string
+    | { src?: string | null }
+    | undefined);
+  const imageSrc = typeof primaryImageSrc === 'string' ? primaryImageSrc : primaryImageSrc?.src ?? null;
 
   return (
     <article className="product-card">
       <Link href={`/produit/${product.id}`} className="product-card__image-wrap">
-        <Image
-          src={product.images[0] ?? '/og-default.png'}
+        <SafeImage
+          src={imageSrc}
           alt={product.name}
           fill
           sizes="(max-width: 768px) 50vw, 25vw"
           className="product-card__image"
+          placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
         />
         {product.is_daily_surplus ? <span className="tag tag--yellow">Offre du jour</span> : null}
         {product.low_stock ? <span className="tag tag--red">Stock faible</span> : null}

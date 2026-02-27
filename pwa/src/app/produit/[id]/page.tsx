@@ -1,14 +1,18 @@
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
 import { ProductDetailClient } from '@/components/ProductDetailClient';
 import { ViewItemTracker } from '@/components/EventTrackers';
+import { SafeImage } from '@/components/SafeImage';
 import { getProductServer } from '@/lib/server/products';
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
   const product = await getProductServer(Number(params.id));
   if (!product) notFound();
-  const gallery = (product.images.length ? product.images : ['/og-default.png']).slice(0, 4);
+  const rawImages = (product as unknown as { images?: Array<string | { src?: string | null }> }).images ?? [];
+  const gallery = rawImages
+    .map((item) => (typeof item === 'string' ? item : item?.src ?? null))
+    .filter((item): item is string => Boolean(item))
+    .slice(0, 4);
 
   return (
     <MarketingScaffold whatsappMessage={`Bonjour SAEG, je veux commander ${product.name}.`}>
@@ -25,25 +29,27 @@ export default async function ProductPage({ params }: { params: { id: string } }
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           <div className="lg:col-span-7 flex flex-col gap-4">
             <div className="aspect-square w-full rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm flex items-center justify-center">
-              <Image
-                src={gallery[0] || '/og-default.png'}
+              <SafeImage
+                src={gallery[0] ?? null}
                 alt={product.name}
                 width={1200}
                 height={1200}
                 className="w-full h-full object-cover"
                 sizes="(max-width: 1024px) 100vw, 58vw"
+                placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
               />
             </div>
             <div className="grid grid-cols-4 gap-4">
-              {gallery.map((src, i) => (
-                <div key={`${src}-${i}`} className={`aspect-square rounded-lg overflow-hidden cursor-pointer ${i === 0 ? 'border-2 border-primary' : 'border border-slate-200 opacity-80'}`}>
-                  <Image
+              {(gallery.length > 0 ? gallery : [null]).map((src, i) => (
+                <div key={`${src || 'placeholder'}-${i}`} className={`aspect-square rounded-lg overflow-hidden cursor-pointer ${i === 0 ? 'border-2 border-primary' : 'border border-slate-200 opacity-80'}`}>
+                  <SafeImage
                     src={src}
                     alt={`${product.name} ${i + 1}`}
                     width={320}
                     height={320}
                     className="w-full h-full object-cover"
                     sizes="(max-width: 1024px) 25vw, 14vw"
+                    placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
                   />
                 </div>
               ))}

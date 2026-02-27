@@ -27,6 +27,9 @@ const dynamicPatterns = dynamicSources
 
 const remotePatterns = [
   { protocol: 'https', hostname: 'admin.store.saeggabon.ga' },
+  { protocol: 'https', hostname: 'www.admin.store.saeggabon.ga' },
+  { protocol: 'https', hostname: 'store.saeggabon.ga' },
+  { protocol: 'https', hostname: 'www.store.saeggabon.ga' },
   { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
   { protocol: 'http', hostname: '127.0.0.1' },
   { protocol: 'http', hostname: 'localhost' },
