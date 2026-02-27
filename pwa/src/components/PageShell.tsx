@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
+import type { Route } from 'next';
 import Link from 'next/link';
 
-export function PageShell({ title, subtitle, children, backHref }: { title: string; subtitle?: string; children: ReactNode; backHref?: string }) {
+export function PageShell({ title, subtitle, children, backHref }: { title: string; subtitle?: string; children: ReactNode; backHref?: Route }) {
   return (
     <div className="page-shell">
       <header className="page-shell__header">

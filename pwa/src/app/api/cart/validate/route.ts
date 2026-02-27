@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateCartAgainstProducts } from '@/lib/cart-validation';
 import { getProductServer } from '@/lib/server/products';
-import type { SaegCartItem, SaegCommune, SaegDeliveryMode } from '@/types/saeg';
+import type { SaegCartItem, SaegCommune, SaegDeliveryMode, SaegProduct } from '@/types/saeg';
 
 interface CartValidatePayload {
   items: SaegCartItem[];
@@ -16,7 +16,8 @@ export async function POST(request: Request) {
   }
 
   const ids = Array.from(new Set(body.items.map((i) => i.productId))).filter((id) => Number.isFinite(id));
-  const products = (await Promise.all(ids.map((id) => getProductServer(id)))).filter(Boolean);
+  const productResults = await Promise.all(ids.map((id) => getProductServer(id)));
+  const products = productResults.filter((product): product is SaegProduct => product !== null);
 
   const result = validateCartAgainstProducts({
     items: body.items,

@@ -119,7 +119,7 @@ export default async function HomePage() {
             <p className="text-white/80 text-lg">Recevez les offres du jour et packs anti-gaspillage sur WhatsApp.</p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
               <input className="flex-1 bg-white border-none rounded py-3 px-4 focus:ring-2 focus:ring-white/20" placeholder="Votre numéro WhatsApp" type="text" />
-              <button className="bg-slate-900 text-white font-bold py-3 px-8 rounded hover:bg-slate-800 transition-colors uppercase tracking-widest text-xs">S'abonner</button>
+              <button className="bg-slate-900 text-white font-bold py-3 px-8 rounded hover:bg-slate-800 transition-colors uppercase tracking-widest text-xs">S&apos;abonner</button>
             </div>
           </div>
         </section>

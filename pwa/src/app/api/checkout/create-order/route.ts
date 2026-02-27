@@ -3,7 +3,7 @@ import { validateCartAgainstProducts } from '@/lib/cart-validation';
 import { env, hasWooEnv } from '@/lib/env';
 import { getProductServer } from '@/lib/server/products';
 import { wooFetch } from '@/lib/server/woo';
-import type { SaegCartItem, SaegCheckoutForm } from '@/types/saeg';
+import type { SaegCartItem, SaegCheckoutForm, SaegProduct } from '@/types/saeg';
 
 interface CheckoutPayload {
   items: SaegCartItem[];
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
   }
 
   const ids = Array.from(new Set(body.items.map((i) => i.productId)));
-  const products = (await Promise.all(ids.map((id) => getProductServer(id)))).filter(Boolean);
+  const productResults = await Promise.all(ids.map((id) => getProductServer(id)));
+  const products = productResults.filter((product): product is SaegProduct => product !== null);
   const validation = validateCartAgainstProducts({
     items: body.items,
     products,

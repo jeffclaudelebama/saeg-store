@@ -1,10 +1,11 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/providers/CartProvider';
 
-const navItems = [
+const navItems: Array<{ href: Route; label: string }> = [
   { href: '/', label: 'Accueil' },
   { href: '/catalogue', label: 'Boutique' },
   { href: '/livraison', label: 'Livraison' },

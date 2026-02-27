@@ -57,12 +57,6 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr" className="light">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        />
-      </head>
       <body className={`${inter.className} font-display bg-background-light text-slate-900 antialiased`}>
         <AppProviders>
           <PwaBoot />

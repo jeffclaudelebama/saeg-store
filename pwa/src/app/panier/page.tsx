@@ -11,7 +11,7 @@ export default function CartPage() {
             <span>/</span>
             <span className="font-semibold text-primary">Mon Panier</span>
           </nav>
-          <h1 className="text-3xl font-black text-primary uppercase tracking-tight">Votre Panier d'Achats</h1>
+          <h1 className="text-3xl font-black text-primary uppercase tracking-tight">Votre Panier d&apos;Achats</h1>
         </div>
         <CartPageClient />
       </main>

@@ -1,10 +1,11 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/providers/CartProvider';
 
-const tabs = [
+const tabs: Array<{ href: Route; label: string; icon: string }> = [
   { href: '/', label: 'Accueil', icon: 'home' },
   { href: '/catalogue', label: 'Catalogue', icon: 'grid_view' },
   { href: '/panier', label: 'Panier', icon: 'shopping_cart' },

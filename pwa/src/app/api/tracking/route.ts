@@ -3,7 +3,7 @@ import { hasWooEnv } from '@/lib/env';
 import { wooFetch } from '@/lib/server/woo';
 import type { SaegTrackingResponse } from '@/types/saeg';
 
-function mapStatus(status: string): SaegTrackingResponse['status'] {
+function mapStatus(status: string): NonNullable<SaegTrackingResponse['status']> {
   switch (status) {
     case 'completed':
       return 'livree';
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     }
 
     const status = mapStatus(order.status || 'pending');
-    const statusLabels: Record<string, string> = {
+    const statusLabels: Record<NonNullable<SaegTrackingResponse['status']>, string> = {
       recue: 'Reçue',
       preparation: 'Préparation',
       en_route: 'En route',
