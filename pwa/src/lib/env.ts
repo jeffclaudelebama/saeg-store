@@ -7,11 +7,11 @@ function getEnv(name: string, fallback = ''): string {
 }
 
 function getWpPublicUrl(): string {
-  return process.env.NEXT_PUBLIC_WP_URL ?? process.env.NEXT_PUBLIC_WP_PUBLIC_URL ?? 'http://localhost:8080';
+  return process.env.NEXT_PUBLIC_WP_URL ?? process.env.NEXT_PUBLIC_WP_PUBLIC_URL ?? 'https://admin.store.saeggabon.ga';
 }
 
 export const env = {
-  siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000'),
+  siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'https://store.saeggabon.ga'),
   wpPublicUrl: getWpPublicUrl(),
   gaMeasurementId: getEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID', ''),
   defaultCurrency: getEnv('SAEG_DEFAULT_CURRENCY', 'XAF'),

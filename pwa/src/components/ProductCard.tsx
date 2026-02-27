@@ -24,7 +24,7 @@ export function ProductCard({ product }: { product: SaegProduct }) {
           fill
           sizes="(max-width: 768px) 50vw, 25vw"
           className="product-card__image"
-          placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
+          fallbackSrc="/img/placeholder-produit.png"
         />
         {product.is_daily_surplus ? <span className="tag tag--yellow">Offre du jour</span> : null}
         {product.low_stock ? <span className="tag tag--red">Stock faible</span> : null}

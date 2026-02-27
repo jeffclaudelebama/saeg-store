@@ -36,7 +36,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                 height={1200}
                 className="w-full h-full object-cover"
                 sizes="(max-width: 1024px) 100vw, 58vw"
-                placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
+                fallbackSrc="/img/placeholder-produit.png"
               />
             </div>
             <div className="grid grid-cols-4 gap-4">
@@ -49,7 +49,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
                     height={320}
                     className="w-full h-full object-cover"
                     sizes="(max-width: 1024px) 25vw, 14vw"
-                    placeholderClassName="flex h-full w-full items-center justify-center bg-slate-100 text-primary/20"
+                    fallbackSrc="/img/placeholder-produit.png"
                   />
                 </div>
               ))}

@@ -7,12 +7,12 @@ import { PwaBoot } from '@/components/PwaBoot';
 import { InstallPwaPrompt } from '@/components/InstallPwaPrompt';
 import { BottomNav } from '@/components/BottomNav';
 import { APP_NAME } from '@/lib/constants';
-import { env } from '@/lib/env';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://store.saeggabon.ga';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(env.siteUrl),
+  metadataBase: new URL(siteUrl),
   title: {
     default: `${APP_NAME}`,
     template: `%s | ${APP_NAME}`,
@@ -30,15 +30,8 @@ export const metadata: Metadata = {
     description: 'Produits frais et invendus valorisés au Gabon. Vente au kilo, livraison locale, click & collect.',
     type: 'website',
     locale: 'fr_GA',
-    url: env.siteUrl,
-    images: [
-      {
-        url: '/og-default.png',
-        width: 1200,
-        height: 630,
-        alt: 'SAEG - La Boutique',
-      },
-    ],
+    url: siteUrl,
+    images: ['/og-default.png'],
   },
   twitter: {
     card: 'summary_large_image',

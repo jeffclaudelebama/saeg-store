@@ -3,7 +3,7 @@ import { env } from '@/lib/env';
 import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
 
-const PRODUCT_FALLBACK_IMAGE = '/og-default.png';
+const PRODUCT_FALLBACK_IMAGE = '/img/placeholder-produit.png';
 const PRODUCTION_MEDIA_HOSTS = new Set(['admin.store.saeggabon.ga', 'store.saeggabon.ga']);
 const BLOCKED_PLACEHOLDER_HOSTS = new Set(['via.placeholder.com', 'placehold.co', 'dummyimage.com']);
 
@@ -79,6 +79,14 @@ function normalizeImageUrl(raw: string): string | null {
     return null;
   }
 
+  if (value.startsWith('/')) {
+    if (isPublicAssetPath(value)) {
+      return value;
+    }
+    const absolute = new URL(value, ensureTrailingSlash(env.wpPublicUrl));
+    return normalizeAbsoluteImageUrl(absolute.toString());
+  }
+
   if (value.startsWith('//')) {
     return normalizeAbsoluteImageUrl(`https:${value}`);
   }
@@ -89,7 +97,7 @@ function normalizeImageUrl(raw: string): string | null {
 
   const baseUrl = env.wpPublicUrl || env.siteUrl;
   try {
-    const absolute = new URL(value.startsWith('/') ? value : `/${value}`, ensureTrailingSlash(baseUrl));
+    const absolute = new URL(value, ensureTrailingSlash(baseUrl));
     return normalizeAbsoluteImageUrl(absolute.toString());
   } catch {
     return null;
@@ -102,14 +110,17 @@ function normalizeAbsoluteImageUrl(url: string): string | null {
     if (BLOCKED_PLACEHOLDER_HOSTS.has(parsed.hostname)) {
       return PRODUCT_FALLBACK_IMAGE;
     }
-    const isLocalHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-    if (!isLocalHost && (env.siteUrl.startsWith('https://') || PRODUCTION_MEDIA_HOSTS.has(parsed.hostname)) && parsed.protocol === 'http:') {
+    if ((env.siteUrl.startsWith('https://') || PRODUCTION_MEDIA_HOSTS.has(parsed.hostname)) && parsed.protocol === 'http:') {
       parsed.protocol = 'https:';
     }
     return parsed.toString();
   } catch {
     return null;
   }
+}
+
+function isPublicAssetPath(pathname: string): boolean {
+  return pathname.startsWith('/img/') || pathname === '/og-default.png' || pathname.startsWith('/icons/');
 }
 
 function ensureTrailingSlash(url: string): string {

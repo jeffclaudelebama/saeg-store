@@ -23,7 +23,8 @@ const dynamicSources = [
 
 const dynamicPatterns = dynamicSources
   .map((source) => toRemotePattern(source))
-  .filter(Boolean);
+  .filter(Boolean)
+  .filter((pattern) => pattern.protocol === 'https');
 
 const remotePatterns = [
   { protocol: 'https', hostname: 'admin.store.saeggabon.ga' },
@@ -31,8 +32,6 @@ const remotePatterns = [
   { protocol: 'https', hostname: 'store.saeggabon.ga' },
   { protocol: 'https', hostname: 'www.store.saeggabon.ga' },
   { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
-  { protocol: 'http', hostname: '127.0.0.1' },
-  { protocol: 'http', hostname: 'localhost' },
   ...dynamicPatterns,
 ];
 
