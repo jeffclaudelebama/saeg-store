@@ -12,6 +12,7 @@ const navItems: Array<{ href: Route; label: string }> = [
   { href: '/catalogue', label: 'Boutique' },
   { href: '/livraison', label: 'Livraison' },
   { href: '/faq', label: 'FAQ' },
+  { href: '/compte', label: 'Compte' },
   { href: '/contact', label: 'Contact' },
 ];
 
@@ -70,6 +71,9 @@ export function SiteHeader() {
               </Link>
               <Link href="/suivi" className="p-2 text-slate-700 hover:bg-primary/10 rounded-lg transition-colors" aria-label="Suivi commande">
                 <span className="material-symbols-outlined">local_shipping</span>
+              </Link>
+              <Link href="/compte" className="p-2 text-slate-700 hover:bg-primary/10 rounded-lg transition-colors" aria-label="Compte client">
+                <span className="material-symbols-outlined">person</span>
               </Link>
             </div>
           </div>

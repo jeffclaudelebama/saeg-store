@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { KgSelector } from '@/components/KgSelector';
 import { EmptyState } from '@/components/UiStates';
 import { SAEG_WHATSAPP_INTL } from '@/lib/constants';
@@ -11,18 +11,27 @@ import { formatCurrency, formatQty } from '@/lib/format';
 import { useCart } from '@/providers/CartProvider';
 import type { SaegCommune, SaegDeliveryMode } from '@/types/saeg';
 
+function quantityForItem(item: { unitType: 'kg' | 'unit'; quantity: number; weight_kg?: number }): number {
+  return item.unitType === 'kg' ? Number(item.weight_kg ?? item.quantity) : Number(item.quantity);
+}
+
 export function CartPageClient() {
   const router = useRouter();
-  const { items, subtotal, updateItemQuantity, removeItem, hydrated } = useCart();
+  const searchParams = useSearchParams();
+  const { items, subtotal, updateItemQuantity, removeItem, hydrated, hydrateWarnings, clearHydrateWarnings } = useCart();
   const [commune, setCommune] = useState<SaegCommune>('Libreville');
   const [modeLivraison, setModeLivraison] = useState<SaegDeliveryMode>('delivery');
   const whatsappNumber = SAEG_WHATSAPP_INTL;
+  const invalidSet = useMemo(() => {
+    const token = searchParams.get('invalid') || '';
+    return new Set(token.split(',').map((item) => item.trim()).filter(Boolean));
+  }, [searchParams]);
 
   const shipping = getDeliveryFee(commune, modeLivraison);
   const total = subtotal + shipping;
 
   const shareUrl = useMemo(() => {
-    const lines = items.map((item) => `- ${item.name}: ${item.unitType === 'kg' ? `${item.quantity.toFixed(2).replace('.', ',')} kg` : `${item.quantity} unité(s)`}`);
+    const lines = items.map((item) => `- ${item.name}: ${item.unitType === 'kg' ? `${quantityForItem(item).toFixed(2).replace('.', ',')} kg` : `${item.quantity} unité(s)`}`);
     const text = [
       'Panier SAEG - La Boutique',
       ...lines,
@@ -49,12 +58,39 @@ export function CartPageClient() {
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2 space-y-6">
+        {hydrateWarnings.length > 0 ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-amber-800">Ajustements panier</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-700">
+                  {hydrateWarnings.map((warning, index) => (
+                    <li key={`${warning}-${index}`}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+              <button type="button" onClick={clearHydrateWarnings} className="text-amber-700 hover:text-amber-900">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {invalidSet.size > 0 ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="text-sm font-bold text-red-700">Certains articles doivent être corrigés avant checkout.</p>
+            <p className="mt-1 text-xs text-red-700">Les lignes concernées sont surlignées en rouge.</p>
+          </div>
+        ) : null}
+
         <div className="bg-white rounded shadow-sm overflow-hidden border border-slate-200">
           <div className="divide-y divide-slate-200">
             {items.map((item) => {
-              const lineTotal = item.unitPrice * item.quantity;
+              const qty = quantityForItem(item);
+              const lineTotal = item.unitPrice * qty;
+              const isInvalid = invalidSet.has(item.key);
               return (
-                <div key={item.key} className="p-4 sm:p-6">
+                <div key={item.key} className={`p-4 sm:p-6 ${isInvalid ? 'bg-red-50/60 border-l-4 border-red-400' : ''}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{item.categoryName || 'Produit'}</p>
@@ -66,7 +102,7 @@ export function CartPageClient() {
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
                     <KgSelector
                       unitType={item.unitType}
-                      value={item.quantity}
+                      value={qty}
                       minKg={item.minKg}
                       stepKg={item.stepKg}
                       maxKg={item.stockKg}
@@ -75,7 +111,7 @@ export function CartPageClient() {
                     <div className="rounded-lg bg-primary/5 px-4 py-3 text-right">
                       <p className="text-xs font-semibold uppercase tracking-wider text-primary/70">Sous-total</p>
                       <p className="text-lg font-black text-primary">{formatCurrency(lineTotal, item.currency)}</p>
-                      <p className="text-xs text-slate-500">{formatQty(item.quantity, item.unitType)}</p>
+                      <p className="text-xs text-slate-500">{formatQty(qty, item.unitType)}</p>
                     </div>
                   </div>
                 </div>

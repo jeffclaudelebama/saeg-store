@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateCartAgainstProducts } from '@/lib/cart-validation';
 import { env, hasWooEnv } from '@/lib/env';
+import { normalizeGabonPhone } from '@/lib/phone';
 import { getProductServer } from '@/lib/server/products';
 import { wooFetch } from '@/lib/server/woo';
 import type { SaegCartItem, SaegCheckoutForm, SaegProduct } from '@/types/saeg';
@@ -22,25 +23,6 @@ function mapPayment(form: SaegCheckoutForm) {
     return { payment_method: 'bacs', payment_method_title: 'Mobile Money', set_paid: false };
   }
   return { payment_method: 'cod', payment_method_title: 'Paiement à la livraison', set_paid: false };
-}
-
-function normalizePhone(phone: string): string | null {
-  const digits = phone.replace(/\D+/g, '');
-  if (!digits) {
-    return null;
-  }
-  let local = '';
-  if (digits.startsWith('241') && digits.length >= 11) {
-    local = digits.slice(3, 11);
-  } else if (digits.startsWith('0') && digits.length >= 9) {
-    local = digits.slice(1, 9);
-  } else if (digits.length === 8) {
-    local = digits;
-  }
-  if (!/^\d{8}$/.test(local)) {
-    return null;
-  }
-  return `241${local}`;
 }
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
@@ -252,7 +234,7 @@ export async function POST(request: Request) {
   if (form.modeLivraison === 'delivery' && !form.address_1.trim()) {
     return NextResponse.json({ error: 'Le quartier / adresse est obligatoire pour la livraison.' }, { status: 422 });
   }
-  const normalizedBillingPhone = normalizePhone(form.telephone);
+  const normalizedBillingPhone = normalizeGabonPhone(form.telephone);
   if (!normalizedBillingPhone) {
     return NextResponse.json({ error: 'Téléphone invalide. Format attendu: 241XXXXXXXX.' }, { status: 422 });
   }
@@ -261,7 +243,7 @@ export async function POST(request: Request) {
     if (!form.mobileMoneyPayerNumber?.trim()) {
       return NextResponse.json({ error: 'Numéro Airtel/Moov du payeur requis.' }, { status: 422 });
     }
-    const normalizedPayerNumber = normalizePhone(form.mobileMoneyPayerNumber);
+    const normalizedPayerNumber = normalizeGabonPhone(form.mobileMoneyPayerNumber);
     if (!normalizedPayerNumber) {
       return NextResponse.json({ error: 'Numéro Airtel/Moov invalide. Format attendu: 241XXXXXXXX.' }, { status: 422 });
     }
@@ -292,19 +274,22 @@ export async function POST(request: Request) {
   }
 
   const lineItems = parsed.items.map((item) => {
-    if (item.unitType === 'kg') {
+    const unitType = item.unitType ?? item.unit_type ?? 'unit';
+    const productId = Number(item.productId ?? item.product_id);
+    if (unitType === 'kg') {
+      const weightKg = typeof item.weight_kg === 'number' ? item.weight_kg : item.quantity;
       return {
-        product_id: item.productId,
+        product_id: productId,
         quantity: 1,
         meta_data: [
           { key: '_saeg_unit_type', value: 'kg' },
-          { key: '_saeg_weight_kg', value: String(item.quantity) },
+          { key: '_saeg_weight_kg', value: String(weightKg) },
         ],
       };
     }
 
     return {
-      product_id: item.productId,
+      product_id: productId,
       quantity: item.quantity,
     };
   });

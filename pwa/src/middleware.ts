@@ -5,8 +5,10 @@ type Bucket = {
   resetAt: number;
 };
 
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 120;
+const DEFAULT_WINDOW_MS = 60_000;
+const DEFAULT_MAX_REQUESTS = 120;
+const ORDERS_WINDOW_MS = 5 * 60_000;
+const ORDERS_MAX_REQUESTS = 30;
 
 declare global {
   // eslint-disable-next-line no-var
@@ -32,6 +34,11 @@ export function middleware(request: NextRequest) {
   const store = getStore();
   const now = Date.now();
   const ip = getClientIp(request);
+  const pathname = request.nextUrl.pathname;
+  const scope = pathname.startsWith('/api/orders') ? 'orders' : 'default';
+  const windowMs = scope === 'orders' ? ORDERS_WINDOW_MS : DEFAULT_WINDOW_MS;
+  const maxRequests = scope === 'orders' ? ORDERS_MAX_REQUESTS : DEFAULT_MAX_REQUESTS;
+  const bucketKey = `${scope}:${ip}`;
 
   for (const [key, bucket] of store.entries()) {
     if (bucket.resetAt <= now) {
@@ -39,17 +46,17 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  const current = store.get(ip);
+  const current = store.get(bucketKey);
   if (!current || current.resetAt <= now) {
-    store.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    store.set(bucketKey, { count: 1, resetAt: now + windowMs });
     return NextResponse.next();
   }
 
-  if (current.count >= MAX_REQUESTS_PER_WINDOW) {
+  if (current.count >= maxRequests) {
     const retryAfter = Math.max(1, Math.ceil((current.resetAt - now) / 1000));
     return NextResponse.json(
       {
-        error: 'Trop de requêtes. Veuillez réessayer.',
+        error: scope === 'orders' ? 'Trop de requêtes sur les commandes. Réessayez dans quelques minutes.' : 'Trop de requêtes. Veuillez réessayer.',
       },
       {
         status: 429,
@@ -61,7 +68,7 @@ export function middleware(request: NextRequest) {
   }
 
   current.count += 1;
-  store.set(ip, current);
+  store.set(bucketKey, current);
   return NextResponse.next();
 }
 

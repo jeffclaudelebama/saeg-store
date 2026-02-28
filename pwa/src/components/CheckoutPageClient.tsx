@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BeginCheckoutTracker } from '@/components/EventTrackers';
 import { ErrorState, EmptyState } from '@/components/UiStates';
+import { loadAccountProfile, saveAccountProfile } from '@/lib/account-profile';
 import { getDeliveryFee } from '@/lib/delivery';
 import { formatCurrency } from '@/lib/format';
+import { normalizeGabonPhone } from '@/lib/phone';
 import { useCart } from '@/providers/CartProvider';
-import type { SaegCheckoutForm, SaegCommune, SaegDeliveryMode, SaegDeliverySlot } from '@/types/saeg';
+import type { SaegCartValidationError, SaegCheckoutForm, SaegCommune, SaegDeliveryMode, SaegDeliverySlot } from '@/types/saeg';
 
 const CHECKOUT_STORAGE_KEY = 'saeg_checkout_form_v2';
 const CHECKOUT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -43,28 +45,6 @@ function isValidEmail(value: string): boolean {
     return true;
   }
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function normalizeGabonPhone(value: string): string | null {
-  const digits = value.replace(/\D+/g, '');
-  if (!digits) {
-    return null;
-  }
-
-  let local = '';
-  if (digits.startsWith('241') && digits.length >= 11) {
-    local = digits.slice(3, 11);
-  } else if (digits.startsWith('0') && digits.length >= 9) {
-    local = digits.slice(1, 9);
-  } else if (digits.length === 8) {
-    local = digits;
-  }
-
-  if (!/^\d{8}$/.test(local)) {
-    return null;
-  }
-
-  return `241${local}`;
 }
 
 function trimForm(form: SaegCheckoutForm): SaegCheckoutForm {
@@ -103,13 +83,21 @@ function validateCheckoutForm(form: SaegCheckoutForm): FormErrors {
   return errors;
 }
 
+function getItemQuantity(item: { unitType?: 'kg' | 'unit'; quantity: number; weight_kg?: number }): number {
+  if ((item.unitType || 'unit') === 'kg') {
+    return Number(item.weight_kg ?? item.quantity);
+  }
+  return Number(item.quantity);
+}
+
 export function CheckoutPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { items, subtotal, clearCart, hydrated } = useCart();
+  const { items, subtotal, clearCart, hydrated, hydrateWarnings, clearHydrateWarnings } = useCart();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
+  const [cartValidationErrors, setCartValidationErrors] = useState<SaegCartValidationError[]>([]);
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [mobileMoneySeed] = useState(() => Math.random().toString(36).slice(-4).toUpperCase());
 
@@ -161,6 +149,21 @@ export function CheckoutPageClient() {
   }, [initialCommune, initialMode]);
 
   useEffect(() => {
+    const profile = loadAccountProfile();
+    if (!profile) {
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      first_name: prev.first_name || profile.first_name || '',
+      last_name: prev.last_name || profile.last_name || '',
+      telephone: prev.telephone || profile.phone || '',
+      commune: prev.commune || profile.city || 'Libreville',
+      address_1: prev.address_1 || profile.address_1 || '',
+    }));
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
@@ -185,6 +188,20 @@ export function CheckoutPageClient() {
     window.localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(payload));
   }, [form]);
 
+  useEffect(() => {
+    const normalizedPhone = normalizeGabonPhone(form.telephone);
+    if (!normalizedPhone) {
+      return;
+    }
+    saveAccountProfile({
+      phone: normalizedPhone,
+      first_name: form.first_name || '',
+      last_name: form.last_name || '',
+      address_1: form.address_1 || '',
+      city: form.commune,
+    });
+  }, [form.telephone, form.first_name, form.last_name, form.address_1, form.commune]);
+
   const shipping = getDeliveryFee(form.commune, form.modeLivraison);
   const total = subtotal + shipping;
 
@@ -207,6 +224,7 @@ export function CheckoutPageClient() {
   async function submitOrder() {
     setError(null);
     setFieldErrors({});
+    setCartValidationErrors([]);
 
     const next = trimForm(form);
     const validationErrors = validateCheckoutForm(next);
@@ -239,6 +257,28 @@ export function CheckoutPageClient() {
 
     startTransition(async () => {
       try {
+        const cartSnapshot = {
+          items,
+          commune: next.commune,
+          modeLivraison: next.modeLivraison,
+        };
+        const validateRes = await fetch('/api/cart/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cartSnapshot),
+        });
+        const validateData = await validateRes.json();
+        if (process.env.NODE_ENV !== 'production') {
+          console.info('[SAEG][checkout] cart snapshot', cartSnapshot);
+          console.info('[SAEG][checkout] validateCart result', validateData);
+        }
+        if (!validateData?.ok) {
+          const errors = Array.isArray(validateData?.errors) ? (validateData.errors as SaegCartValidationError[]) : [];
+          setCartValidationErrors(errors);
+          setError('Panier invalide');
+          return;
+        }
+
         const payload = new FormData();
         payload.append('items', JSON.stringify(items));
         payload.append('form', JSON.stringify(next));
@@ -253,6 +293,9 @@ export function CheckoutPageClient() {
         const data = await res.json();
 
         if (!res.ok) {
+          if (Array.isArray(data?.validation?.errors)) {
+            setCartValidationErrors(data.validation.errors as SaegCartValidationError[]);
+          }
           const message = data?.error || 'Échec de la commande';
           const details = data?.body ? `\n${String(data.body)}` : '';
           throw new Error(`${message}${details}`);
@@ -437,6 +480,45 @@ export function CheckoutPageClient() {
             </div>
           </section>
 
+          {hydrateWarnings.length > 0 ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-amber-800">Ajustements panier</p>
+                  <ul className="mt-2 space-y-1 text-sm text-amber-700">
+                    {hydrateWarnings.map((warning, index) => (
+                      <li key={`${warning}-${index}`}>• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+                <button type="button" onClick={clearHydrateWarnings} className="text-amber-700 hover:text-amber-900">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {cartValidationErrors.length > 0 ? (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-bold text-red-700">Panier invalide</p>
+              <ul className="mt-2 space-y-1 text-sm text-red-700">
+                {cartValidationErrors.map((entry) => (
+                  <li key={`${entry.itemKey}-${entry.reason}`}>
+                    • {entry.name} : {entry.reason}
+                    {entry.details ? ` (${entry.details})` : ''}
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="mt-3 btn btn-ghost"
+                onClick={() => router.push(`/panier?invalid=${encodeURIComponent(cartValidationErrors.map((entry) => entry.itemKey).join(','))}`)}
+              >
+                Corriger mon panier
+              </button>
+            </div>
+          ) : null}
+
           {error ? <ErrorState title="Erreur checkout" description={error} /> : null}
         </div>
 
@@ -455,9 +537,9 @@ export function CheckoutPageClient() {
                   <div key={item.key} className="flex justify-between gap-4 text-sm">
                     <div>
                       <p className="font-semibold text-slate-900">{item.name}</p>
-                      <p className="text-slate-500">{item.unitType === 'kg' ? `${item.quantity.toFixed(2).replace('.', ',')} kg` : `${item.quantity} unité(s)`}</p>
+                      <p className="text-slate-500">{item.unitType === 'kg' ? `${getItemQuantity(item).toFixed(2).replace('.', ',')} kg` : `${item.quantity} unité(s)`}</p>
                     </div>
-                    <p className="font-bold text-primary">{formatCurrency(item.unitPrice * item.quantity, item.currency)}</p>
+                    <p className="font-bold text-primary">{formatCurrency(item.unitPrice * getItemQuantity(item), item.currency)}</p>
                   </div>
                 ))}
                 <hr className="border-slate-100" />
