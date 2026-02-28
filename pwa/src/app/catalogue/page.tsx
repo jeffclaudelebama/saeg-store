@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
-import { ProductCard } from '@/components/ProductCard';
+import { ProductsSearchGrid } from '@/components/ProductsSearchGrid';
 import { getCategoriesServer, getProductsServer } from '@/lib/server/products';
 
 export default async function CataloguePage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
@@ -8,7 +8,7 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
   const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined;
 
   const [products, categories] = await Promise.all([
-    getProductsServer({ category, search, perPage: 48 }),
+    getProductsServer({ category, search, perPage: 100 }),
     getCategoriesServer(),
   ]);
 
@@ -33,18 +33,16 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
           </div>
         </div>
 
-        {products.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <h2 className="text-xl font-bold text-slate-900">Aucun produit trouvé</h2>
-            <p className="mt-2 text-sm text-slate-500">Essayez un autre filtre ou revenez aux offres du jour.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
+        <ProductsSearchGrid
+          id="catalogue-search"
+          initialItems={products}
+          initialSearch={search}
+          category={category}
+          showDefaultGrid
+          placeholder="Rechercher un produit..."
+          defaultEmptyTitle="Aucun produit trouvé"
+          defaultEmptyDescription="Essayez un autre filtre ou revenez aux offres du jour."
+        />
       </main>
     </MarketingScaffold>
   );

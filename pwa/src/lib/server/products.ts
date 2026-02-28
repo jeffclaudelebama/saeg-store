@@ -12,6 +12,14 @@ type WooMeta = { key?: string; value?: unknown };
 type WooImage = { src?: string | null };
 type WooTag = { id?: number; slug?: string; name?: string };
 type WooCategory = { id: number; slug: string; name: string; count?: number };
+type ProductQuery = {
+  search?: string;
+  category?: string;
+  dailyOnly?: boolean;
+  page?: number;
+  perPage?: number;
+  noCache?: boolean;
+};
 type WooProduct = {
   id: number;
   slug?: string;
@@ -34,12 +42,28 @@ type WooProduct = {
   saeg?: Record<string, unknown>;
 };
 
-export async function getProductsServer(params?: { search?: string; category?: string; dailyOnly?: boolean; page?: number; perPage?: number }): Promise<SaegProduct[]> {
+export type ProductsResult = {
+  items: SaegProduct[];
+  total: number;
+  page: number;
+  perPage: number;
+};
+
+export async function getProductsServer(params?: ProductQuery): Promise<SaegProduct[]> {
+  const result = await getProductsServerResult(params);
+  return result.items;
+}
+
+export async function getProductsServerResult(params?: ProductQuery): Promise<ProductsResult> {
   const page = Math.max(1, params?.page ?? 1);
-  const perPage = Math.max(1, Math.min(params?.perPage ?? 40, 100));
+  const perPage = Math.max(1, Math.min(params?.perPage ?? 100, 500));
 
   try {
-    const products = await fetchWooProducts(params?.search);
+    const products = await fetchWooProducts({
+      search: params?.search,
+      category: params?.category,
+      noCache: params?.noCache,
+    });
     const mapped = products.map(mapWooProduct).map(normalizeProduct);
     const filtered = mapped.filter((product) => {
       if (params?.dailyOnly && !product.is_daily_surplus) {
@@ -62,21 +86,31 @@ export async function getProductsServer(params?: { search?: string; category?: s
       return true;
     });
     const start = (page - 1) * perPage;
-    return filtered.slice(start, start + perPage);
+    return {
+      items: filtered.slice(start, start + perPage),
+      total: filtered.length,
+      page,
+      perPage,
+    };
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
       console.error('[SAEG] getProductsServer error:', error);
     }
-    return [];
+    return {
+      items: [],
+      total: 0,
+      page,
+      perPage,
+    };
   }
 }
 
-export async function getProductServer(id: number): Promise<SaegProduct | null> {
+export async function getProductServer(id: number, options?: { noCache?: boolean }): Promise<SaegProduct | null> {
   if (!Number.isFinite(id) || id <= 0) {
     return null;
   }
   try {
-    const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`);
+    const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache));
     if (product.status && product.status !== 'publish') {
       return null;
     }
@@ -89,7 +123,7 @@ export async function getProductServer(id: number): Promise<SaegProduct | null> 
   }
 }
 
-export async function getCategoriesServer(): Promise<SaegCategory[]> {
+export async function getCategoriesServer(options?: { noCache?: boolean }): Promise<SaegCategory[]> {
   try {
     const categories: SaegCategory[] = [];
     for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
@@ -100,7 +134,7 @@ export async function getCategoriesServer(): Promise<SaegCategory[]> {
       });
       let batch: WooCategory[];
       try {
-        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`);
+        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(options?.noCache));
       } catch (error) {
         if (isInvalidWooPageError(error)) {
           break;
@@ -130,20 +164,25 @@ export async function getCategoriesServer(): Promise<SaegCategory[]> {
   }
 }
 
-async function fetchWooProducts(search?: string): Promise<WooProduct[]> {
+async function fetchWooProducts(params?: { search?: string; category?: string; noCache?: boolean }): Promise<WooProduct[]> {
   const items: WooProduct[] = [];
+  const search = normalizeText(params?.search);
+  const categoryId = await resolveWooCategoryId(params?.category, params?.noCache);
   for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
     const query = new URLSearchParams({
       status: 'publish',
       per_page: String(WOO_PAGE_SIZE),
       page: String(page),
     });
-    if (search && normalizeText(search)) {
-      query.set('search', normalizeText(search));
+    if (search) {
+      query.set('search', search);
+    }
+    if (typeof categoryId === 'number') {
+      query.set('category', String(categoryId));
     }
     let batch: WooProduct[];
     try {
-      batch = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`);
+      batch = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(params?.noCache));
     } catch (error) {
       if (isInvalidWooPageError(error)) {
         break;
@@ -159,6 +198,44 @@ async function fetchWooProducts(search?: string): Promise<WooProduct[]> {
     }
   }
   return items;
+}
+
+async function resolveWooCategoryId(category?: string, noCache?: boolean): Promise<number | null> {
+  const value = normalizeText(category);
+  if (!value) {
+    return null;
+  }
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+  const target = value.toLowerCase();
+  for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
+    const query = new URLSearchParams({
+      per_page: String(WOO_PAGE_SIZE),
+      page: String(page),
+      hide_empty: 'false',
+    });
+    let batch: WooCategory[];
+    try {
+      batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(noCache));
+    } catch (error) {
+      if (isInvalidWooPageError(error)) {
+        return null;
+      }
+      throw error;
+    }
+    if (!Array.isArray(batch) || batch.length === 0) {
+      return null;
+    }
+    const found = batch.find((item) => normalizeText(item.slug).toLowerCase() === target || normalizeText(item.name).toLowerCase() === target);
+    if (found) {
+      return Number(found.id);
+    }
+    if (batch.length < WOO_PAGE_SIZE) {
+      return null;
+    }
+  }
+  return null;
 }
 
 function normalizeProduct(product: SaegProduct): SaegProduct {
@@ -294,6 +371,13 @@ function isPublicAssetPath(pathname: string): boolean {
 
 function ensureTrailingSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
+}
+
+function getWooFetchInit(noCache?: boolean): { revalidate?: number; cache?: RequestCache } {
+  if (noCache) {
+    return { revalidate: 0, cache: 'no-store' };
+  }
+  return {};
 }
 
 function sanitizeRichText(value: unknown): string {

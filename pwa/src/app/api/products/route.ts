@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProductsServer } from '@/lib/server/products';
+import { getProductsServerResult } from '@/lib/server/products';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search') ?? undefined;
   const category = searchParams.get('category') ?? undefined;
-  const dailyOnly = ['1', 'true', 'yes'].includes((searchParams.get('dailyOnly') ?? '').toLowerCase());
+  const dailyToken = (searchParams.get('dailyOnly') ?? searchParams.get('daily') ?? '').toLowerCase();
+  const dailyOnly = ['1', 'true', 'yes'].includes(dailyToken);
   const page = Number(searchParams.get('page') ?? '1');
-  const perPage = Number(searchParams.get('perPage') ?? '40');
+  const perPage = Number(searchParams.get('perPage') ?? '100');
 
-  const items = await getProductsServer({ search, category, dailyOnly, page, perPage });
-  return NextResponse.json({ items, count: items.length, page, perPage });
+  const result = await getProductsServerResult({
+    search,
+    category,
+    dailyOnly,
+    page,
+    perPage,
+    noCache: true,
+  });
+
+  return NextResponse.json({
+    items: result.items,
+    count: result.total,
+    page: result.page,
+    perPage: result.perPage,
+  });
 }

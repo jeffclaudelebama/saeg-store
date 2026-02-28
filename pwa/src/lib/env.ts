@@ -1,9 +1,15 @@
-const requiredServer = ['SAEG_WC_BASE_URL', 'SAEG_WC_CONSUMER_KEY', 'SAEG_WC_CONSUMER_SECRET'] as const;
-
-type RequiredServerKey = (typeof requiredServer)[number];
-
 function getEnv(name: string, fallback = ''): string {
   return process.env[name] ?? fallback;
+}
+
+function getFirstEnv(names: string[], fallback = ''): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value && value.trim()) {
+      return value;
+    }
+  }
+  return fallback;
 }
 
 function getWpPublicUrl(): string {
@@ -17,11 +23,11 @@ export const env = {
   defaultCurrency: getEnv('SAEG_DEFAULT_CURRENCY', 'XAF'),
   whatsappShareNumber: getEnv('SAEG_WHATSAPP_SHARE_NUMBER', '24177638864'),
   orderStatusOnCreate: getEnv('SAEG_ORDER_STATUS_ON_CREATE', 'pending'),
-  wcBaseUrl: getEnv('SAEG_WC_BASE_URL', ''),
-  wcKey: getEnv('SAEG_WC_CONSUMER_KEY', ''),
-  wcSecret: getEnv('SAEG_WC_CONSUMER_SECRET', ''),
+  wcBaseUrl: getFirstEnv(['SAEG_WC_BASE_URL', 'WP_BASE_URL', 'NEXT_PUBLIC_WP_URL', 'NEXT_PUBLIC_WP_PUBLIC_URL'], ''),
+  wcKey: getFirstEnv(['SAEG_WC_CONSUMER_KEY', 'WC_CONSUMER_KEY'], ''),
+  wcSecret: getFirstEnv(['SAEG_WC_CONSUMER_SECRET', 'WC_CONSUMER_SECRET'], ''),
 };
 
 export function hasWooEnv(): boolean {
-  return requiredServer.every((k: RequiredServerKey) => Boolean(process.env[k]));
+  return Boolean(env.wcBaseUrl && env.wcKey && env.wcSecret);
 }

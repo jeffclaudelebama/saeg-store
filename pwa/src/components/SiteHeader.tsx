@@ -16,6 +16,16 @@ const navItems: Array<{ href: Route; label: string }> = [
 export function SiteHeader() {
   const pathname = usePathname();
   const { itemCount } = useCart();
+  const searchSectionId = pathname === '/' ? 'home-search' : pathname.startsWith('/catalogue') ? 'catalogue-search' : null;
+
+  const focusSearch = () => {
+    if (!searchSectionId) {
+      return;
+    }
+    const input = document.querySelector<HTMLInputElement>(`#${searchSectionId} input[type="search"]`);
+    input?.focus();
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/95 backdrop-blur-sm">
@@ -47,10 +57,15 @@ export function SiteHeader() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link href="/catalogue" className="hidden sm:flex items-center rounded-lg bg-primary/5 px-3 py-2 text-sm text-slate-600">
+            <button
+              type="button"
+              onClick={focusSearch}
+              className="hidden sm:flex items-center rounded-lg bg-primary/5 px-3 py-2 text-sm text-slate-600"
+              aria-label="Ouvrir la recherche de produits"
+            >
               <span className="material-symbols-outlined mr-2 text-lg text-primary/60">search</span>
               <span className="hidden lg:inline">Rechercher...</span>
-            </Link>
+            </button>
             <Link href="/panier" className="relative p-2 text-slate-700 hover:bg-primary/10 rounded-lg transition-colors">
               <span className="material-symbols-outlined">shopping_cart</span>
               {itemCount > 0 ? (
