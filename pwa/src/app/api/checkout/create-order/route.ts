@@ -162,7 +162,6 @@ async function createInternalOrderNote(orderId: number, note: string) {
       note,
       customer_note: false,
     }),
-    revalidate: 0,
   });
 }
 
@@ -172,7 +171,6 @@ async function updateOrderMeta(orderId: number, payload: Array<{ key: string; va
     body: JSON.stringify({
       meta_data: payload,
     }),
-    revalidate: 0,
   });
 }
 
@@ -189,7 +187,6 @@ async function uploadPaymentProof(orderId: number, reference: string, payerNumbe
   }>(`/wp-json/saeg/v1/orders/${orderId}/payment-proof`, {
     method: 'POST',
     body: formData,
-    revalidate: 0,
   });
 }
 

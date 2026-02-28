@@ -7,7 +7,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     return NextResponse.json({ error: 'ID invalide' }, { status: 400 });
   }
 
-  const product = await getProductServer(token, { noCache: true });
+  const product = await getProductServer(token);
   if (!product) {
     return NextResponse.json({ error: 'Produit introuvable' }, { status: 404 });
   }

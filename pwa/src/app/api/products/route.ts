@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     dailyOnly,
     page,
     perPage,
-    noCache: true,
   });
 
   return NextResponse.json({

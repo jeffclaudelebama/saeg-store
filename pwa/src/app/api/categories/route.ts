@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(100, Math.floor(limitRaw)) : 50;
 
-  const all = await getCategoriesServer({ noCache: true });
+  const all = await getCategoriesServer();
   const filtered = search
     ? all.filter((item) => item.name.toLowerCase().includes(search) || item.slug.toLowerCase().includes(search))
     : all;

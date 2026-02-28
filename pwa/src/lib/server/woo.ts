@@ -22,17 +22,24 @@ export async function wooFetch<T>(path: string, init: RequestInit & { revalidate
     throw new WooUnavailableError('Variables WooCommerce manquantes');
   }
 
-  const { revalidate = REVALIDATE_PRODUCTS_SECONDS, headers, ...rest } = init;
+  const { revalidate = REVALIDATE_PRODUCTS_SECONDS, headers, cache: requestedCache, ...rest } = init;
   const isFormDataBody = typeof FormData !== 'undefined' && rest.body instanceof FormData;
-  const res = await fetch(`${baseUrl()}${path}`, {
+  const method = String(rest.method ?? 'GET').toUpperCase();
+  const isWriteMethod = method !== 'GET' && method !== 'HEAD';
+  const baseOptions = {
     ...rest,
     headers: {
       Authorization: authHeader(),
       ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     },
-    next: rest.method && rest.method !== 'GET' ? { revalidate: 0 } : { revalidate },
-    cache: rest.method && rest.method !== 'GET' ? 'no-store' : 'force-cache',
+  };
+
+  const res = await fetch(`${baseUrl()}${path}`, {
+    ...baseOptions,
+    ...(requestedCache === 'no-store' || isWriteMethod || revalidate === 0
+      ? { cache: 'no-store' as const }
+      : { next: { revalidate } }),
   });
 
   if (!res.ok) {

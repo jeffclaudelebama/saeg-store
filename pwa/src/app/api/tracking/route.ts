@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ found: false, message: 'Numéro de commande invalide.' }, { status: 400 });
     }
 
-    const order = await wooFetch<any>(`/wp-json/wc/v3/orders/${numericId}`, { revalidate: 0 });
+    const order = await wooFetch<any>(`/wp-json/wc/v3/orders/${numericId}`, { cache: 'no-store' });
     const billingPhone = normalizePhone(order?.billing?.phone ?? '');
     const queryPhone = normalizePhone(phone);
 

@@ -1,5 +1,5 @@
 import { env } from '@/lib/env';
-import { REVALIDATE_PRODUCT_SECONDS } from '@/lib/constants';
+import { REVALIDATE_PRODUCTS_SECONDS, REVALIDATE_PRODUCT_SECONDS } from '@/lib/constants';
 import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
 
@@ -120,7 +120,7 @@ export async function getProductServer(identifier: number | string, options?: { 
       return null;
     }
     try {
-      const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache, true));
+      const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache, REVALIDATE_PRODUCT_SECONDS));
       if (product.status && product.status !== 'publish') {
         return null;
       }
@@ -139,7 +139,7 @@ export async function getProductServer(identifier: number | string, options?: { 
       status: 'publish',
       per_page: '1',
     });
-    const products = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(options?.noCache, true));
+    const products = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(options?.noCache, REVALIDATE_PRODUCT_SECONDS));
     const product = products[0];
     if (!product) {
       return null;
@@ -164,7 +164,7 @@ export async function getCategoriesServer(options?: { noCache?: boolean }): Prom
       });
       let batch: WooCategory[];
       try {
-        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(options?.noCache));
+        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(options?.noCache, REVALIDATE_PRODUCT_SECONDS));
       } catch (error) {
         if (isInvalidWooPageError(error)) {
           break;
@@ -212,7 +212,7 @@ async function fetchWooProducts(params?: { search?: string; category?: string; n
     }
     let batch: WooProduct[];
     try {
-      batch = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(params?.noCache));
+      batch = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(params?.noCache, REVALIDATE_PRODUCTS_SECONDS));
     } catch (error) {
       if (isInvalidWooPageError(error)) {
         break;
@@ -247,7 +247,7 @@ async function resolveWooCategoryId(category?: string, noCache?: boolean): Promi
     });
     let batch: WooCategory[];
     try {
-      batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(noCache));
+      batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(noCache, REVALIDATE_PRODUCT_SECONDS));
     } catch (error) {
       if (isInvalidWooPageError(error)) {
         return null;
@@ -403,12 +403,12 @@ function ensureTrailingSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
 }
 
-function getWooFetchInit(noCache?: boolean, isSingle = false): { revalidate?: number; cache?: RequestCache } {
+function getWooFetchInit(noCache?: boolean, revalidate?: number): { revalidate?: number; cache?: RequestCache } {
   if (noCache) {
-    return { revalidate: 0, cache: 'no-store' };
+    return { cache: 'no-store' };
   }
-  if (isSingle) {
-    return { revalidate: REVALIDATE_PRODUCT_SECONDS };
+  if (typeof revalidate === 'number') {
+    return { revalidate };
   }
   return {};
 }
