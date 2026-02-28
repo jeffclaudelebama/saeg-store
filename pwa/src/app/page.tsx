@@ -1,11 +1,9 @@
 import Link from 'next/link';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
 import { ProductCard } from '@/components/ProductCard';
-import { ProductsSearchGrid } from '@/components/ProductsSearchGrid';
 import { getCategoriesServer, getProductsServer } from '@/lib/server/products';
 
-export default async function HomePage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
-  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined;
+export default async function HomePage() {
   const [products, categories] = await Promise.all([
     getProductsServer({ perPage: 100 }),
     getCategoriesServer(),
@@ -59,18 +57,6 @@ export default async function HomePage({ searchParams }: { searchParams?: Record
             <span className="hidden md:inline">🔥 Livraison Libreville / Akanda / Owendo</span>
           </div>
         </div>
-
-        <section className="max-w-7xl mx-auto px-4 md:px-10 py-10">
-          <ProductsSearchGrid
-            id="home-search"
-            initialItems={products}
-            initialSearch={search}
-            showDefaultGrid={false}
-            placeholder="Rechercher un produit sur SAEG..."
-            defaultEmptyTitle="Aucun produit trouvé"
-            defaultEmptyDescription="Essayez un autre mot-clé."
-          />
-        </section>
 
         <section className="max-w-7xl mx-auto px-4 md:px-10 py-16">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
