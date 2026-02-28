@@ -32,6 +32,7 @@ if (!class_exists('SAEG_Weight_Products')) {
         private const DASHBOARD_DISCOUNT_NONCE = 'saeg_apply_daily_discount';
         private const MARK_MOBILE_MONEY_PAID_ACTION = 'saeg_mark_mobile_money_paid';
         private const REST_NAMESPACE = 'saeg/v1';
+        private const WHATSAPP_LEAD_POST_TYPE = 'saeg_whatsapp_lead';
         private const CONTACT_PHONE = '011453040';
         private const CONTACT_WHATSAPP = '24177638864';
         private const CONTACT_EMAIL = 'store@saeggabon.ga';
@@ -57,6 +58,7 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             add_action('rest_api_init', [__CLASS__, 'register_rest_routes']);
             add_action('init', [__CLASS__, 'register_meta']);
+            add_action('init', [__CLASS__, 'register_whatsapp_lead_post_type']);
 
             add_action('woocommerce_product_options_general_product_data', [__CLASS__, 'render_general_fields']);
             add_action('woocommerce_product_options_inventory_product_data', [__CLASS__, 'render_inventory_fields']);
@@ -149,6 +151,17 @@ if (!class_exists('SAEG_Weight_Products')) {
                 'callback' => [__CLASS__, 'rest_get_product'],
             ]);
 
+            register_rest_route(self::REST_NAMESPACE, '/categories', [
+                'methods' => WP_REST_Server::READABLE,
+                'permission_callback' => '__return_true',
+                'args' => [
+                    'page' => ['type' => 'integer', 'default' => 1, 'minimum' => 1],
+                    'per_page' => ['type' => 'integer', 'default' => 50, 'minimum' => 1, 'maximum' => 100],
+                    'search' => ['type' => 'string'],
+                ],
+                'callback' => [__CLASS__, 'rest_list_categories'],
+            ]);
+
             register_rest_route(self::REST_NAMESPACE, '/orders/(?P<id>\d+)/payment-proof', [
                 'methods' => WP_REST_Server::CREATABLE,
                 'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
@@ -158,6 +171,16 @@ if (!class_exists('SAEG_Weight_Products')) {
                     'payer_number' => ['type' => 'string', 'required' => false],
                 ],
                 'callback' => [__CLASS__, 'rest_upload_payment_proof'],
+            ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/whatsapp-leads', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_whatsapp_leads'],
+                'args' => [
+                    'phone' => ['type' => 'string', 'required' => true],
+                    'source' => ['type' => 'string', 'required' => false],
+                ],
+                'callback' => [__CLASS__, 'rest_create_whatsapp_lead'],
             ]);
         }
 
@@ -220,6 +243,99 @@ if (!class_exists('SAEG_Weight_Products')) {
             }
 
             return new WP_REST_Response(self::serialize_product($product));
+        }
+
+        public static function rest_list_categories(WP_REST_Request $request): WP_REST_Response {
+            $page = max(1, (int) $request->get_param('page'));
+            $per_page = min(100, max(1, (int) $request->get_param('per_page')));
+            $search = sanitize_text_field((string) $request->get_param('search'));
+
+            $query = [
+                'taxonomy' => 'product_cat',
+                'hide_empty' => false,
+                'number' => $per_page,
+                'offset' => ($page - 1) * $per_page,
+            ];
+            if ($search !== '') {
+                $query['search'] = $search;
+            }
+
+            $terms = get_terms($query);
+            if (is_wp_error($terms)) {
+                return new WP_REST_Response(['error' => $terms->get_error_message()], 500);
+            }
+
+            $all_terms = get_terms([
+                'taxonomy' => 'product_cat',
+                'hide_empty' => false,
+                'fields' => 'ids',
+                'search' => $search,
+            ]);
+            $total = is_wp_error($all_terms) ? count($terms) : count((array) $all_terms);
+
+            $items = array_map(static function ($term) {
+                return [
+                    'id' => (int) $term->term_id,
+                    'slug' => (string) $term->slug,
+                    'name' => (string) $term->name,
+                    'count' => (int) $term->count,
+                ];
+            }, $terms);
+
+            return new WP_REST_Response([
+                'items' => $items,
+                'count' => $total,
+                'page' => $page,
+                'per_page' => $per_page,
+            ]);
+        }
+
+        public static function rest_can_manage_whatsapp_leads(WP_REST_Request $request) {
+            $expected = self::get_whatsapp_leads_token();
+            if ($expected === '') {
+                return new WP_Error('saeg_token_missing', __('Token WhatsApp leads non configuré.', 'saeg-weight-products'), ['status' => 500]);
+            }
+
+            $provided = (string) $request->get_header('x-saeg-token');
+            if ($provided !== '' && hash_equals($expected, $provided)) {
+                return true;
+            }
+
+            return new WP_Error('saeg_forbidden', __('Accès non autorisé.', 'saeg-weight-products'), ['status' => 401]);
+        }
+
+        public static function rest_create_whatsapp_lead(WP_REST_Request $request): WP_REST_Response {
+            $phone = self::normalize_gabon_phone((string) $request->get_param('phone'));
+            if ($phone === null) {
+                return new WP_REST_Response(['error' => 'Numéro WhatsApp invalide'], 422);
+            }
+
+            $source = sanitize_key((string) $request->get_param('source'));
+            if ($source === '') {
+                $source = 'footer_newsletter';
+            }
+
+            $post_id = wp_insert_post([
+                'post_type' => self::WHATSAPP_LEAD_POST_TYPE,
+                'post_status' => 'private',
+                'post_title' => sprintf('Lead WhatsApp %s', $phone),
+            ], true);
+
+            if (is_wp_error($post_id)) {
+                return new WP_REST_Response(['error' => $post_id->get_error_message()], 500);
+            }
+
+            update_post_meta($post_id, '_saeg_phone', $phone);
+            update_post_meta($post_id, '_saeg_source', $source);
+            update_post_meta($post_id, '_saeg_created_at', current_time('mysql'));
+            update_post_meta($post_id, '_saeg_ip', sanitize_text_field((string) $request->get_header('x-forwarded-for')));
+
+            return new WP_REST_Response([
+                'ok' => true,
+                'id' => (int) $post_id,
+                'phone' => $phone,
+                'source' => $source,
+            ]);
         }
 
         public static function rest_can_manage_orders(WP_REST_Request $request) {
@@ -1247,6 +1363,57 @@ if (!class_exists('SAEG_Weight_Products')) {
             }
 
             return (int) $row->user_id;
+        }
+
+        private static function register_whatsapp_lead_post_type(): void {
+            register_post_type(self::WHATSAPP_LEAD_POST_TYPE, [
+                'labels' => [
+                    'name' => __('Leads WhatsApp SAEG', 'saeg-weight-products'),
+                    'singular_name' => __('Lead WhatsApp SAEG', 'saeg-weight-products'),
+                ],
+                'public' => false,
+                'show_ui' => false,
+                'show_in_menu' => false,
+                'supports' => ['title'],
+                'capability_type' => 'post',
+                'map_meta_cap' => true,
+            ]);
+        }
+
+        private static function get_whatsapp_leads_token(): string {
+            $token = getenv('SAEG_WA_LEADS_TOKEN');
+            if (is_string($token) && $token !== '') {
+                return $token;
+            }
+            if (defined('SAEG_WA_LEADS_TOKEN')) {
+                $defined = (string) constant('SAEG_WA_LEADS_TOKEN');
+                if ($defined !== '') {
+                    return $defined;
+                }
+            }
+            return '';
+        }
+
+        private static function normalize_gabon_phone(string $raw): ?string {
+            $digits = preg_replace('/\D+/', '', $raw);
+            if (!is_string($digits) || $digits === '') {
+                return null;
+            }
+
+            $local = '';
+            if (strpos($digits, '241') === 0 && strlen($digits) >= 11) {
+                $local = substr($digits, 3, 8);
+            } elseif (strpos($digits, '0') === 0 && strlen($digits) >= 9) {
+                $local = substr($digits, 1, 8);
+            } elseif (strlen($digits) === 8) {
+                $local = $digits;
+            }
+
+            if (!preg_match('/^\d{8}$/', $local)) {
+                return null;
+            }
+
+            return '241' . $local;
         }
 
         private static function register_supervisor_role(): void {

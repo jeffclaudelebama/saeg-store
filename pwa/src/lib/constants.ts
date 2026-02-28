@@ -1,7 +1,8 @@
 import type { SaegCommune } from '@/types/saeg';
 
 export const APP_NAME = 'SAEG - La Boutique';
-export const REVALIDATE_PRODUCTS_SECONDS = 120;
+export const REVALIDATE_PRODUCTS_SECONDS = 30;
+export const REVALIDATE_PRODUCT_SECONDS = 300;
 export const CURRENCY_CODE = 'XAF';
 export const TIMEZONE = 'Africa/Libreville';
 export const SAEG_PHONE = '011453040';

@@ -1,16 +1,28 @@
 import Link from 'next/link';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
 import { ProductsSearchGrid } from '@/components/ProductsSearchGrid';
-import { getCategoriesServer, getProductsServer } from '@/lib/server/products';
+import { getCategoriesServer, getProductsServerResult } from '@/lib/server/products';
 
 export default async function CataloguePage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const category = typeof searchParams?.category === 'string' ? searchParams.category : undefined;
   const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined;
+  const page = Math.max(1, Number(typeof searchParams?.page === 'string' ? searchParams.page : '1') || 1);
+  const limit = 24;
 
-  const [products, categories] = await Promise.all([
-    getProductsServer({ category, search, perPage: 100 }),
+  const [productsResult, categories] = await Promise.all([
+    getProductsServerResult({ category, search, page, perPage: limit }),
     getCategoriesServer(),
   ]);
+  const products = productsResult.items;
+  const totalPages = Math.max(1, Math.ceil(productsResult.total / limit));
+
+  const buildPageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    if (category) params.set('category', category);
+    if (search) params.set('search', search);
+    if (nextPage > 1) params.set('page', String(nextPage));
+    return params.toString() ? `/catalogue?${params.toString()}` : '/catalogue';
+  };
 
   return (
     <MarketingScaffold whatsappMessage="Bonjour SAEG, je consulte la boutique et j’ai besoin d’aide pour choisir mes produits.">
@@ -43,6 +55,27 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
           defaultEmptyTitle="Aucun produit trouvé"
           defaultEmptyDescription="Essayez un autre filtre ou revenez aux offres du jour."
         />
+        {totalPages > 1 ? (
+          <div className="mt-10 flex justify-center gap-2">
+            {Array.from({ length: totalPages }).slice(0, 12).map((_, idx) => {
+              const current = idx + 1;
+              const active = current === page;
+              return (
+                <a
+                  key={current}
+                  href={buildPageHref(current)}
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg border text-sm font-bold transition-colors ${
+                    active
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white border-slate-200 text-slate-700 hover:border-primary/40'
+                  }`}
+                >
+                  {current}
+                </a>
+              );
+            })}
+          </div>
+        ) : null}
       </main>
     </MarketingScaffold>
   );

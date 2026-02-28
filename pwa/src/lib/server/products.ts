@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import { REVALIDATE_PRODUCT_SECONDS } from '@/lib/constants';
 import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
 
@@ -55,8 +56,10 @@ export async function getProductsServer(params?: ProductQuery): Promise<SaegProd
 }
 
 export async function getProductsServerResult(params?: ProductQuery): Promise<ProductsResult> {
-  const page = Math.max(1, params?.page ?? 1);
-  const perPage = Math.max(1, Math.min(params?.perPage ?? 100, 500));
+  const pageInput = typeof params?.page === 'number' && Number.isFinite(params.page) ? params.page : 1;
+  const perPageInput = typeof params?.perPage === 'number' && Number.isFinite(params.perPage) ? params.perPage : 100;
+  const page = Math.max(1, Math.floor(pageInput));
+  const perPage = Math.max(1, Math.min(Math.floor(perPageInput), 500));
 
   try {
     const products = await fetchWooProducts({
@@ -117,7 +120,7 @@ export async function getProductServer(identifier: number | string, options?: { 
       return null;
     }
     try {
-      const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache));
+      const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache, true));
       if (product.status && product.status !== 'publish') {
         return null;
       }
@@ -136,7 +139,7 @@ export async function getProductServer(identifier: number | string, options?: { 
       status: 'publish',
       per_page: '1',
     });
-    const products = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(options?.noCache));
+    const products = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(options?.noCache, true));
     const product = products[0];
     if (!product) {
       return null;
@@ -400,9 +403,12 @@ function ensureTrailingSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
 }
 
-function getWooFetchInit(noCache?: boolean): { revalidate?: number; cache?: RequestCache } {
+function getWooFetchInit(noCache?: boolean, isSingle = false): { revalidate?: number; cache?: RequestCache } {
   if (noCache) {
     return { revalidate: 0, cache: 'no-store' };
+  }
+  if (isSingle) {
+    return { revalidate: REVALIDATE_PRODUCT_SECONDS };
   }
   return {};
 }

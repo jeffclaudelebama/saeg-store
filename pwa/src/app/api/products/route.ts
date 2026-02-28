@@ -7,8 +7,11 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category') ?? undefined;
   const dailyToken = (searchParams.get('dailyOnly') ?? searchParams.get('daily') ?? '').toLowerCase();
   const dailyOnly = ['1', 'true', 'yes'].includes(dailyToken);
-  const page = Number(searchParams.get('page') ?? '1');
-  const perPage = Number(searchParams.get('perPage') ?? '100');
+  const pageParam = Number(searchParams.get('page') ?? '1');
+  const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+  const limitParam = searchParams.get('limit') ?? searchParams.get('perPage') ?? '24';
+  const perPageRaw = Number(limitParam);
+  const perPage = Number.isFinite(perPageRaw) && perPageRaw > 0 ? Math.min(500, Math.floor(perPageRaw)) : 24;
 
   const result = await getProductsServerResult({
     search,
@@ -24,5 +27,6 @@ export async function GET(request: NextRequest) {
     count: result.total,
     page: result.page,
     perPage: result.perPage,
+    limit: result.perPage,
   });
 }
