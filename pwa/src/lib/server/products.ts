@@ -1,4 +1,3 @@
-import { MOCK_CATEGORIES, MOCK_PRODUCTS } from '@/lib/mock-data';
 import { env } from '@/lib/env';
 import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
@@ -6,60 +5,160 @@ import type { SaegProduct, SaegCategory } from '@/types/saeg';
 const PRODUCT_FALLBACK_IMAGE = '/img/placeholder-produit.png';
 const PRODUCTION_MEDIA_HOSTS = new Set(['admin.store.saeggabon.ga', 'store.saeggabon.ga']);
 const BLOCKED_PLACEHOLDER_HOSTS = new Set(['via.placeholder.com', 'placehold.co', 'dummyimage.com']);
+const WOO_PAGE_SIZE = 100;
+const WOO_MAX_PAGE_GUARD = 20;
+
+type WooMeta = { key?: string; value?: unknown };
+type WooImage = { src?: string | null };
+type WooTag = { id?: number; slug?: string; name?: string };
+type WooCategory = { id: number; slug: string; name: string; count?: number };
+type WooProduct = {
+  id: number;
+  slug?: string;
+  name?: string;
+  permalink?: string;
+  description?: string | null;
+  short_description?: string | null;
+  price?: string | null;
+  regular_price?: string | null;
+  sale_price?: string | null;
+  stock_status?: string | null;
+  stock_quantity?: number | null;
+  status?: string;
+  date_modified?: string | null;
+  date_modified_gmt?: string | null;
+  categories?: WooCategory[];
+  images?: WooImage[];
+  tags?: WooTag[];
+  meta_data?: WooMeta[];
+  saeg?: Record<string, unknown>;
+};
 
 export async function getProductsServer(params?: { search?: string; category?: string; dailyOnly?: boolean; page?: number; perPage?: number }): Promise<SaegProduct[]> {
-  const search = params?.search ? `&search=${encodeURIComponent(params.search)}` : '';
-  const category = params?.category ? `&category=${encodeURIComponent(params.category)}` : '';
-  const dailyOnly = params?.dailyOnly ? '&daily_only=true' : '';
-  const page = `&page=${params?.page ?? 1}`;
-  const perPage = `&per_page=${params?.perPage ?? 40}`;
+  const page = Math.max(1, params?.page ?? 1);
+  const perPage = Math.max(1, Math.min(params?.perPage ?? 40, 100));
 
   try {
-    const data = await wooFetch<{ items: SaegProduct[] }>(`/wp-json/saeg/v1/products?${page.slice(1)}${perPage}${search}${category}${dailyOnly}`);
-    return (data.items ?? []).map(normalizeProduct);
+    const products = await fetchWooProducts(params?.search);
+    const mapped = products.map(mapWooProduct).map(normalizeProduct);
+    const filtered = mapped.filter((product) => {
+      if (params?.dailyOnly && !product.is_daily_surplus) {
+        return false;
+      }
+      if (params?.category) {
+        const expected = normalizeText(params.category).toLowerCase();
+        const hasCategory = product.categories.some((c) => c.slug.toLowerCase() === expected || c.name.toLowerCase() === expected);
+        if (!hasCategory) {
+          return false;
+        }
+      }
+      if (params?.search) {
+        const q = normalizeText(params.search).toLowerCase();
+        const haystack = stripHtml([product.name, product.short_description, product.description].join(' ')).toLowerCase();
+        if (!haystack.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+    const start = (page - 1) * perPage;
+    return filtered.slice(start, start + perPage);
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getProductsServer fallback:', error);
+      console.error('[SAEG] getProductsServer error:', error);
     }
-    return filterMockProducts(MOCK_PRODUCTS, params).map(normalizeProduct);
+    return [];
   }
 }
 
 export async function getProductServer(id: number): Promise<SaegProduct | null> {
+  if (!Number.isFinite(id) || id <= 0) {
+    return null;
+  }
   try {
-    const product = await wooFetch<SaegProduct>(`/wp-json/saeg/v1/products/${id}`);
-    return normalizeProduct(product);
+    const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`);
+    if (product.status && product.status !== 'publish') {
+      return null;
+    }
+    return normalizeProduct(mapWooProduct(product));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getProductServer fallback:', error);
+      console.error('[SAEG] getProductServer error:', error);
     }
-    const product = MOCK_PRODUCTS.find((p) => p.id === id) ?? null;
-    return product ? normalizeProduct(product) : null;
+    return null;
   }
 }
 
 export async function getCategoriesServer(): Promise<SaegCategory[]> {
   try {
-    const categories = await wooFetch<Array<{ id: number; slug: string; name: string; count?: number }>>('/wp-json/wc/v3/products/categories?per_page=100');
-    return categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name }));
+    const categories: SaegCategory[] = [];
+    for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
+      const query = new URLSearchParams({
+        per_page: String(WOO_PAGE_SIZE),
+        page: String(page),
+        hide_empty: 'false',
+      });
+      let batch: WooCategory[];
+      try {
+        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`);
+      } catch (error) {
+        if (isInvalidWooPageError(error)) {
+          break;
+        }
+        throw error;
+      }
+      if (!Array.isArray(batch) || batch.length === 0) {
+        break;
+      }
+      categories.push(
+        ...batch.map((category) => ({
+          id: category.id,
+          slug: normalizeText(category.slug),
+          name: normalizeText(category.name),
+        })),
+      );
+      if (batch.length < WOO_PAGE_SIZE) {
+        break;
+      }
+    }
+    return dedupeCategories(categories).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getCategoriesServer fallback:', error);
+      console.error('[SAEG] getCategoriesServer error:', error);
     }
-    return MOCK_CATEGORIES;
+    return [];
   }
 }
 
-function filterMockProducts(products: SaegProduct[], params?: { search?: string; category?: string; dailyOnly?: boolean }): SaegProduct[] {
-  return products.filter((p) => {
-    if (params?.dailyOnly && !p.is_daily_surplus) return false;
-    if (params?.category && !p.categories.some((c) => c.slug === params.category || c.name.toLowerCase() === params.category?.toLowerCase())) return false;
-    if (params?.search) {
-      const q = params.search.toLowerCase();
-      if (![p.name, p.short_description, p.description].join(' ').toLowerCase().includes(q)) return false;
+async function fetchWooProducts(search?: string): Promise<WooProduct[]> {
+  const items: WooProduct[] = [];
+  for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
+    const query = new URLSearchParams({
+      status: 'publish',
+      per_page: String(WOO_PAGE_SIZE),
+      page: String(page),
+    });
+    if (search && normalizeText(search)) {
+      query.set('search', normalizeText(search));
     }
-    return true;
-  });
+    let batch: WooProduct[];
+    try {
+      batch = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`);
+    } catch (error) {
+      if (isInvalidWooPageError(error)) {
+        break;
+      }
+      throw error;
+    }
+    if (!Array.isArray(batch) || batch.length === 0) {
+      break;
+    }
+    items.push(...batch);
+    if (batch.length < WOO_PAGE_SIZE) {
+      break;
+    }
+  }
+  return items;
 }
 
 function normalizeProduct(product: SaegProduct): SaegProduct {
@@ -73,8 +172,78 @@ function normalizeProduct(product: SaegProduct): SaegProduct {
   };
 }
 
+function mapWooProduct(product: WooProduct): SaegProduct {
+  const saegMap = buildValueMap(asRecord(product.saeg));
+  const metaMap = buildValueMap(fromMetaData(product.meta_data));
+  const unitType = resolveUnitType(saegMap, metaMap);
+  const regularPrice = toCurrencyNumber(product.regular_price);
+  const salePrice = toCurrencyNumber(product.sale_price);
+  const rawPrice = toCurrencyNumber(product.price);
+  const fallbackPrice = salePrice || rawPrice || regularPrice;
+  const stepKg = Math.max(0.01, toPositiveNumber(resolveValue(saegMap, metaMap, ['step_kg', 'saeg_step_kg']), unitType === 'kg' ? 0.25 : 1));
+  const minKg = Math.max(stepKg, toPositiveNumber(resolveValue(saegMap, metaMap, ['min_kg', 'saeg_min_kg']), unitType === 'kg' ? stepKg : 1));
+  const pluginPricePerKg = toCurrencyNumber(resolveValue(saegMap, metaMap, ['price_per_kg', 'saeg_price_per_kg']));
+  const pricePerKg = unitType === 'kg' ? (pluginPricePerKg || fallbackPrice) : 0;
+  const stockFromMeta = toNullableNumber(resolveValue(saegMap, metaMap, ['stock_kg', 'saeg_stock_kg']));
+  const stockFromWoo = toNullableNumber(product.stock_quantity);
+  const stockKg = unitType === 'kg' ? stockFromMeta ?? stockFromWoo : null;
+  const lowStockThreshold = Math.max(0, toPositiveNumber(resolveValue(saegMap, metaMap, ['low_stock_threshold', 'saeg_low_stock_threshold']), 2));
+  const stockStatus = normalizeText(product.stock_status) || 'instock';
+  const lowStock = typeof stockKg === 'number' ? stockKg <= lowStockThreshold : false;
+  const normalizedCategories: SaegCategory[] = dedupeCategories(
+    (product.categories ?? []).map((category) => ({
+      id: Number(category.id),
+      slug: normalizeText(category.slug),
+      name: normalizeText(category.name),
+    })),
+  );
+  const images = mapWooImages(product.images);
+  const isDailySurplus =
+    toBoolean(resolveValue(saegMap, metaMap, ['is_daily_surplus', 'saeg_is_daily_surplus', 'daily_only', 'saeg_daily_only'])) ||
+    hasDailyTag(product.tags);
+  const description = sanitizeRichText(product.description);
+  const shortDescription = sanitizeRichText(product.short_description);
+
+  return {
+    id: Number(product.id),
+    slug: normalizeText(product.slug) || `produit-${product.id}`,
+    name: normalizeText(product.name) || `Produit ${product.id}`,
+    permalink: normalizeText(product.permalink),
+    description,
+    short_description: shortDescription,
+    images,
+    categories: normalizedCategories,
+    currency: env.defaultCurrency || 'XAF',
+    currency_symbol: 'FCFA',
+    price: Math.round(fallbackPrice),
+    regular_price: Math.round(regularPrice || fallbackPrice),
+    sale_price: Math.round(salePrice),
+    unit_type: unitType,
+    price_per_kg: Math.round(pricePerKg),
+    step_kg: unitType === 'kg' ? toFixedNumber(stepKg, 2) : 1,
+    min_kg: unitType === 'kg' ? toFixedNumber(minKg, 2) : 1,
+    stock_kg: unitType === 'kg' && typeof stockKg === 'number' ? toFixedNumber(stockKg, 2) : null,
+    low_stock_threshold: toFixedNumber(lowStockThreshold, 2),
+    low_stock: Boolean(lowStock),
+    stock_status: stockStatus,
+    is_daily_surplus: Boolean(isDailySurplus),
+    origin: normalizeText(resolveValue(saegMap, metaMap, ['origin', 'saeg_origin'])) || 'SAEG',
+    updated_at: normalizeText(product.date_modified_gmt ?? product.date_modified ?? '') || null,
+  };
+}
+
+function mapWooImages(images?: WooImage[]): string[] {
+  const list = images ?? [];
+  const primary = normalizeImageUrl(normalizeText(list[0]?.src)) ?? PRODUCT_FALLBACK_IMAGE;
+  const rest = list
+    .slice(1)
+    .map((image) => normalizeImageUrl(normalizeText(image?.src)))
+    .filter((image): image is string => Boolean(image));
+  return [primary, ...rest];
+}
+
 function normalizeImageUrl(raw: string): string | null {
-  const value = String(raw || '').trim();
+  const value = normalizeText(raw);
   if (!value || value.startsWith('data:')) {
     return null;
   }
@@ -125,4 +294,155 @@ function isPublicAssetPath(pathname: string): boolean {
 
 function ensureTrailingSlash(url: string): string {
   return url.endsWith('/') ? url : `${url}/`;
+}
+
+function sanitizeRichText(value: unknown): string {
+  const text = normalizeText(value);
+  if (!text) {
+    return '';
+  }
+  return text
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(['"]).*?\1/gi, '')
+    .replace(/\sjavascript:/gi, '');
+}
+
+function normalizeText(value: unknown): string {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value.normalize('NFC').trim();
+}
+
+function stripHtml(value: string): string {
+  return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function toCurrencyNumber(value: unknown): number {
+  const parsed = toNullableNumber(value);
+  return parsed ?? 0;
+}
+
+function toPositiveNumber(value: unknown, fallback: number): number {
+  const parsed = toNullableNumber(value);
+  return typeof parsed === 'number' && parsed >= 0 ? parsed : fallback;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+  if (typeof value === 'string') {
+    const compact = value
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/,/g, '.')
+      .replace(/[^0-9.\-]/g, '');
+    if (!compact) {
+      return null;
+    }
+    const parsed = Number(compact);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function toBoolean(value: unknown): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value === 1;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return ['1', 'true', 'yes', 'oui', 'on'].includes(normalized);
+  }
+  return false;
+}
+
+function toFixedNumber(value: number, precision = 2): number {
+  return Number(value.toFixed(precision));
+}
+
+function resolveUnitType(saegMap: Map<string, unknown>, metaMap: Map<string, unknown>): 'kg' | 'unit' {
+  const value = normalizeText(resolveValue(saegMap, metaMap, ['unit_type', 'saeg_unit_type', 'saeg_unit'])).toLowerCase();
+  if (value === 'kg' || value === 'kilo' || value === 'kilogramme' || value === 'kilogram') {
+    return 'kg';
+  }
+  return 'unit';
+}
+
+function resolveValue(saegMap: Map<string, unknown>, metaMap: Map<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const normalized = normalizeKey(key);
+    if (saegMap.has(normalized)) {
+      const value = saegMap.get(normalized);
+      if (value !== null && value !== undefined && value !== '') {
+        return value;
+      }
+    }
+    if (metaMap.has(normalized)) {
+      const value = metaMap.get(normalized);
+      if (value !== null && value !== undefined && value !== '') {
+        return value;
+      }
+    }
+  }
+  return undefined;
+}
+
+function buildValueMap(record: Record<string, unknown>): Map<string, unknown> {
+  const map = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(record)) {
+    map.set(normalizeKey(key), value);
+  }
+  return map;
+}
+
+function fromMetaData(metaData?: WooMeta[]): Record<string, unknown> {
+  const record: Record<string, unknown> = {};
+  for (const meta of metaData ?? []) {
+    const key = normalizeText(meta.key);
+    if (!key) {
+      continue;
+    }
+    record[key] = meta.value;
+  }
+  return record;
+}
+
+function normalizeKey(key: string): string {
+  return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function hasDailyTag(tags?: WooTag[]): boolean {
+  const values = (tags ?? [])
+    .flatMap((tag) => [normalizeText(tag.slug), normalizeText(tag.name)])
+    .map((value) => value.toLowerCase());
+  return values.some((value) => value.includes('invendu') || value.includes('offre-du-jour') || value.includes('offre du jour'));
+}
+
+function isInvalidWooPageError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('rest_post_invalid_page_number') || message.includes('Invalid page number');
+}
+
+function dedupeCategories(categories: SaegCategory[]): SaegCategory[] {
+  const byId = new Map<number, SaegCategory>();
+  for (const category of categories) {
+    if (!Number.isFinite(category.id) || category.id <= 0) {
+      continue;
+    }
+    byId.set(category.id, category);
+  }
+  return [...byId.values()];
 }
