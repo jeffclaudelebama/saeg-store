@@ -158,8 +158,10 @@ export function CheckoutPageClient() {
       first_name: prev.first_name || profile.first_name || '',
       last_name: prev.last_name || profile.last_name || '',
       telephone: prev.telephone || profile.phone || '',
+      email: prev.email || profile.email || '',
       commune: prev.commune || profile.city || 'Libreville',
       address_1: prev.address_1 || profile.address_1 || '',
+      address_2: prev.address_2 || profile.address_2 || '',
     }));
   }, []);
 
@@ -197,10 +199,12 @@ export function CheckoutPageClient() {
       phone: normalizedPhone,
       first_name: form.first_name || '',
       last_name: form.last_name || '',
+      email: form.email || '',
       address_1: form.address_1 || '',
+      address_2: form.address_2 || '',
       city: form.commune,
     });
-  }, [form.telephone, form.first_name, form.last_name, form.address_1, form.commune]);
+  }, [form.telephone, form.first_name, form.last_name, form.email, form.address_1, form.address_2, form.commune]);
 
   const shipping = getDeliveryFee(form.commune, form.modeLivraison);
   const total = subtotal + shipping;

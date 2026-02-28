@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { loadAccountProfile, saveAccountProfile } from '@/lib/account-profile';
+import { loadAccountSession } from '@/lib/account-session';
 import { formatCurrency, formatLibrevilleDate } from '@/lib/format';
 import { normalizeGabonPhone } from '@/lib/phone';
 import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
@@ -33,7 +34,8 @@ export function AccountOrdersClient() {
 
   useEffect(() => {
     const profile = loadAccountProfile();
-    const preferred = phoneFromQuery || profile?.phone || '';
+    const session = loadAccountSession();
+    const preferred = phoneFromQuery || profile?.phone || session?.phone || '';
     const normalized = normalizeGabonPhone(preferred);
     if (!normalized) {
       setLoading(false);

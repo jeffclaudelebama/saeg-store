@@ -72,8 +72,13 @@ export function SiteHeader() {
               <Link href="/suivi" className="p-2 text-slate-700 hover:bg-primary/10 rounded-lg transition-colors" aria-label="Suivi commande">
                 <span className="material-symbols-outlined">local_shipping</span>
               </Link>
-              <Link href="/compte" className="p-2 text-slate-700 hover:bg-primary/10 rounded-lg transition-colors" aria-label="Compte client">
+              <Link
+                href="/compte"
+                className="inline-flex items-center gap-1 rounded-lg p-2 text-slate-700 transition-colors hover:bg-primary/10"
+                aria-label="Compte client"
+              >
                 <span className="material-symbols-outlined">person</span>
+                <span className="hidden xl:inline text-sm font-semibold">Compte</span>
               </Link>
             </div>
           </div>

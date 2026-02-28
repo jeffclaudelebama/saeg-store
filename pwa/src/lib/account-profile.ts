@@ -7,7 +7,9 @@ export type SaegAccountProfile = {
   phone: string;
   first_name?: string;
   last_name?: string;
+  email?: string;
   address_1?: string;
+  address_2?: string;
   city?: SaegCommune;
 };
 
