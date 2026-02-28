@@ -19,15 +19,79 @@ interface ParsedRequestBody {
 
 function mapPayment(form: SaegCheckoutForm) {
   if (form.paiement === 'mobile_money') {
-    return { payment_method: 'saeg_mobile_money', payment_method_title: 'Mobile Money', set_paid: false };
+    return { payment_method: 'bacs', payment_method_title: 'Mobile Money', set_paid: false };
   }
-  return { payment_method: 'cod', payment_method_title: 'Cash à la livraison', set_paid: false };
+  return { payment_method: 'cod', payment_method_title: 'Paiement à la livraison', set_paid: false };
 }
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D+/g, '');
   if (digits.startsWith('241')) return `+${digits}`;
   return `+241${digits}`;
+}
+
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) {
+    return { firstName: 'Client', lastName: '' };
+  }
+  return {
+    firstName: parts[0] ?? 'Client',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function resolveOrderStatus(form: SaegCheckoutForm): 'on-hold' | 'processing' | 'pending' {
+  if (form.paiement === 'mobile_money') {
+    return 'on-hold';
+  }
+  return env.orderStatusOnCreate === 'processing' ? 'processing' : 'pending';
+}
+
+class WooOrderError extends Error {
+  status: number;
+  body: string;
+
+  constructor(status: number, body: string) {
+    super(`Woo order create failed (${status})`);
+    this.name = 'WooOrderError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+async function createWooOrderRaw(payload: Record<string, unknown>) {
+  const baseUrl = env.wcBaseUrl.replace(/\/$/, '');
+  const token = Buffer.from(`${env.wcKey}:${env.wcSecret}`).toString('base64');
+  const endpoint = `${baseUrl}/wp-json/wc/v3/orders`;
+
+  console.info('[SAEG][checkout] create-order payload', JSON.stringify(payload));
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store',
+  });
+
+  const bodyText = await response.text();
+  console.info('[SAEG][checkout] create-order response', JSON.stringify({ status: response.status, body: bodyText }));
+
+  if (!response.ok) {
+    throw new WooOrderError(response.status, bodyText);
+  }
+
+  try {
+    return JSON.parse(bodyText);
+  } catch {
+    return { raw: bodyText };
+  }
 }
 
 function random4(): string {
@@ -169,6 +233,7 @@ export async function POST(request: Request) {
   }
 
   const phone = normalizePhone(parsed.form.telephone);
+  const { firstName, lastName } = splitName(parsed.form.nom);
 
   const lineItems = parsed.items.map((item) => ({
     product_id: item.productId,
@@ -195,23 +260,23 @@ export async function POST(request: Request) {
   ];
 
   const orderPayload = {
-    status: parsed.form.paiement === 'mobile_money' ? 'on-hold' : env.orderStatusOnCreate || 'pending',
+    status: resolveOrderStatus(parsed.form),
     currency: 'XAF',
     billing: {
-      first_name: parsed.form.nom.split(' ').slice(0, 1).join(' '),
-      last_name: parsed.form.nom.split(' ').slice(1).join(' '),
+      first_name: firstName,
+      last_name: lastName,
       phone,
       email: '',
       address_1: parsed.form.adresse,
-      city: parsed.form.commune,
+      city: 'Libreville',
       country: 'GA',
     },
     shipping: {
-      first_name: parsed.form.nom.split(' ').slice(0, 1).join(' '),
-      last_name: parsed.form.nom.split(' ').slice(1).join(' '),
+      first_name: firstName,
+      last_name: lastName,
       phone,
       address_1: parsed.form.adresse,
-      city: parsed.form.commune,
+      city: 'Libreville',
       country: 'GA',
     },
     customer_note:
@@ -244,11 +309,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await wooFetch<any>('/wp-json/wc/v3/orders', {
-      method: 'POST',
-      body: JSON.stringify(orderPayload),
-      revalidate: 0,
-    });
+    const order = await createWooOrderRaw(orderPayload);
 
     let paymentReference = '';
     let proofUploadResult: unknown = null;
@@ -288,6 +349,16 @@ export async function POST(request: Request) {
       validation,
     });
   } catch (error) {
+    if (error instanceof WooOrderError) {
+      return NextResponse.json(
+        {
+          error: 'WooCommerce order creation failed',
+          status: error.status,
+          body: error.body,
+        },
+        { status: error.status },
+      );
+    }
     console.error('[SAEG] create-order failed', error);
     return NextResponse.json({ error: 'Impossible de créer la commande', details: String(error) }, { status: 502 });
   }
