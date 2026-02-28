@@ -105,19 +105,46 @@ export async function getProductsServerResult(params?: ProductQuery): Promise<Pr
   }
 }
 
-export async function getProductServer(id: number, options?: { noCache?: boolean }): Promise<SaegProduct | null> {
-  if (!Number.isFinite(id) || id <= 0) {
+export async function getProductServer(identifier: number | string, options?: { noCache?: boolean }): Promise<SaegProduct | null> {
+  const token = String(identifier ?? '').trim();
+  if (!token) {
     return null;
   }
+
+  if (/^\d+$/.test(token)) {
+    const id = Number(token);
+    if (!Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+    try {
+      const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache));
+      if (product.status && product.status !== 'publish') {
+        return null;
+      }
+      return normalizeProduct(mapWooProduct(product));
+    } catch (error) {
+      if (!(error instanceof WooUnavailableError)) {
+        console.error('[SAEG] getProductServer error:', error);
+      }
+      return null;
+    }
+  }
+
   try {
-    const product = await wooFetch<WooProduct>(`/wp-json/wc/v3/products/${id}`, getWooFetchInit(options?.noCache));
-    if (product.status && product.status !== 'publish') {
+    const query = new URLSearchParams({
+      slug: token,
+      status: 'publish',
+      per_page: '1',
+    });
+    const products = await wooFetch<WooProduct[]>(`/wp-json/wc/v3/products?${query.toString()}`, getWooFetchInit(options?.noCache));
+    const product = products[0];
+    if (!product) {
       return null;
     }
     return normalizeProduct(mapWooProduct(product));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getProductServer error:', error);
+      console.error('[SAEG] getProductServer by slug error:', error);
     }
     return null;
   }

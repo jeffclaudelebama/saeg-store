@@ -6,7 +6,7 @@ import { SafeImage } from '@/components/SafeImage';
 import { getProductServer } from '@/lib/server/products';
 
 export default async function ProductPage({ params }: { params: { id: string } }) {
-  const product = await getProductServer(Number(params.id));
+  const product = await getProductServer(params.id);
   if (!product) notFound();
   const rawImages = (product as unknown as { images?: Array<string | { src?: string | null }> }).images ?? [];
   const gallery = rawImages
