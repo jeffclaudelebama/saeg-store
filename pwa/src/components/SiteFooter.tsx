@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { WhatsAppNewsletterForm } from '@/components/WhatsAppNewsletterForm';
-import { SAEG_COPYRIGHT, SAEG_EMAIL, SAEG_PHONE } from '@/lib/constants';
+import { SAEG_COPYRIGHT } from '@/lib/constants';
 
 export function SiteFooter() {
   return (
@@ -35,11 +35,9 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <h4 className="text-white font-bold mb-6 uppercase text-sm tracking-widest">Contact & Newsletter</h4>
+          <h4 className="text-white font-bold mb-6 uppercase text-sm tracking-widest">Newsletter</h4>
           <ul className="space-y-4 text-sm">
             <li className="flex items-start gap-3"><span className="material-symbols-outlined text-primary">location_on</span><span>Libreville, Gabon</span></li>
-            <li className="flex items-center gap-3"><span className="material-symbols-outlined text-primary">call</span><span>{SAEG_PHONE}</span></li>
-            <li className="flex items-center gap-3"><span className="material-symbols-outlined text-primary">mail</span><span>{SAEG_EMAIL}</span></li>
           </ul>
           <div className="mt-6">
             <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Recevoir les invendus sur WhatsApp</p>
