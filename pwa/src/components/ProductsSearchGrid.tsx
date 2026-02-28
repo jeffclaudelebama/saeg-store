@@ -13,6 +13,7 @@ type ProductsSearchGridProps = {
   category?: string;
   dailyOnly?: boolean;
   placeholder?: string;
+  showSearchInput?: boolean;
   showDefaultGrid?: boolean;
   defaultEmptyTitle?: string;
   defaultEmptyDescription?: string;
@@ -25,6 +26,7 @@ export function ProductsSearchGrid({
   category,
   dailyOnly = false,
   placeholder = 'Rechercher un produit...',
+  showSearchInput = true,
   showDefaultGrid = true,
   defaultEmptyTitle = 'Aucun produit trouvé',
   defaultEmptyDescription = 'Essayez un autre terme de recherche ou modifiez les filtres.',
@@ -109,29 +111,31 @@ export function ProductsSearchGrid({
 
   return (
     <section id={id} className="space-y-4">
-      <div className="relative w-full max-w-xl">
-        <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={placeholder}
-          className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-12 text-sm font-medium text-slate-900 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-          aria-label="Rechercher des produits"
-        />
-        {hasQuery ? (
-          <button
-            type="button"
-            onClick={() => setQuery('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Effacer la recherche"
-          >
-            <span className="material-symbols-outlined text-base">close</span>
-          </button>
-        ) : null}
-      </div>
+      {showSearchInput ? (
+        <div className="relative w-full max-w-xl">
+          <span className="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={placeholder}
+            className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-12 text-sm font-medium text-slate-900 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+            aria-label="Rechercher des produits"
+          />
+          {hasQuery ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Effacer la recherche"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
-      {hasQuery ? (
+      {showSearchInput && hasQuery ? (
         <p className="text-sm text-slate-500">
           {items.length} résultat{items.length > 1 ? 's' : ''} pour <span className="font-semibold text-slate-700">“{query.trim()}”</span>
         </p>

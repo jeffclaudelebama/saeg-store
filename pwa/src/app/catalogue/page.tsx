@@ -5,12 +5,11 @@ import { getCategoriesServer, getProductsServerResult } from '@/lib/server/produ
 
 export default async function CataloguePage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const category = typeof searchParams?.category === 'string' ? searchParams.category : undefined;
-  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined;
   const page = Math.max(1, Number(typeof searchParams?.page === 'string' ? searchParams.page : '1') || 1);
   const limit = 24;
 
   const [productsResult, categories] = await Promise.all([
-    getProductsServerResult({ category, search, page, perPage: limit }),
+    getProductsServerResult({ category, page, perPage: limit }),
     getCategoriesServer(),
   ]);
   const products = productsResult.items;
@@ -19,7 +18,6 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
   const buildPageHref = (nextPage: number) => {
     const params = new URLSearchParams();
     if (category) params.set('category', category);
-    if (search) params.set('search', search);
     if (nextPage > 1) params.set('page', String(nextPage));
     return params.toString() ? `/catalogue?${params.toString()}` : '/catalogue';
   };
@@ -48,10 +46,9 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
         <ProductsSearchGrid
           id="catalogue-search"
           initialItems={products}
-          initialSearch={search}
           category={category}
+          showSearchInput={false}
           showDefaultGrid
-          placeholder="Rechercher un produit..."
           defaultEmptyTitle="Aucun produit trouvé"
           defaultEmptyDescription="Essayez un autre filtre ou revenez aux offres du jour."
         />
