@@ -7,7 +7,101 @@ import { ErrorState, EmptyState } from '@/components/UiStates';
 import { getDeliveryFee } from '@/lib/delivery';
 import { formatCurrency } from '@/lib/format';
 import { useCart } from '@/providers/CartProvider';
-import type { SaegCheckoutForm, SaegCommune, SaegDeliveryMode, SaegDeliverySlot, SaegPaymentMethod } from '@/types/saeg';
+import type { SaegCheckoutForm, SaegCommune, SaegDeliveryMode, SaegDeliverySlot } from '@/types/saeg';
+
+const CHECKOUT_STORAGE_KEY = 'saeg_checkout_form_v2';
+const CHECKOUT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
+const EMAIL_FALLBACK = 'store@saeggabon.ga';
+const PICKUP_ADDRESS = 'Retrait Marché SAEG';
+
+type CheckoutField =
+  | 'first_name'
+  | 'last_name'
+  | 'telephone'
+  | 'email'
+  | 'commune'
+  | 'address_1'
+  | 'address_2'
+  | 'modeLivraison'
+  | 'creneau'
+  | 'paiement'
+  | 'mobileMoneyPayerNumber'
+  | 'note';
+
+type FormErrors = Partial<Record<CheckoutField, string>>;
+
+function isSaegCommune(value: string | null): value is SaegCommune {
+  return value === 'Libreville' || value === 'Akanda' || value === 'Owendo';
+}
+
+function isSaegDeliveryMode(value: string | null): value is SaegDeliveryMode {
+  return value === 'delivery' || value === 'pickup';
+}
+
+function isValidEmail(value: string): boolean {
+  if (!value.trim()) {
+    return true;
+  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizeGabonPhone(value: string): string | null {
+  const digits = value.replace(/\D+/g, '');
+  if (!digits) {
+    return null;
+  }
+
+  let local = '';
+  if (digits.startsWith('241') && digits.length >= 11) {
+    local = digits.slice(3, 11);
+  } else if (digits.startsWith('0') && digits.length >= 9) {
+    local = digits.slice(1, 9);
+  } else if (digits.length === 8) {
+    local = digits;
+  }
+
+  if (!/^\d{8}$/.test(local)) {
+    return null;
+  }
+
+  return `241${local}`;
+}
+
+function trimForm(form: SaegCheckoutForm): SaegCheckoutForm {
+  return {
+    ...form,
+    first_name: form.first_name.trim(),
+    last_name: (form.last_name || '').trim(),
+    telephone: form.telephone.trim(),
+    email: (form.email || '').trim(),
+    address_1: form.address_1.trim(),
+    address_2: (form.address_2 || '').trim(),
+    mobileMoneyPayerNumber: (form.mobileMoneyPayerNumber || '').trim(),
+    note: (form.note || '').trim(),
+  };
+}
+
+function validateCheckoutForm(form: SaegCheckoutForm): FormErrors {
+  const errors: FormErrors = {};
+  if (!form.first_name.trim()) {
+    errors.first_name = 'Le prénom est obligatoire.';
+  }
+  if (!form.telephone.trim()) {
+    errors.telephone = 'Le téléphone est obligatoire.';
+  } else if (!normalizeGabonPhone(form.telephone)) {
+    errors.telephone = 'Numéro invalide. Format accepté: 077..., 06..., 241..., +241...';
+  }
+  if ((form.email || '').trim() && !isValidEmail(form.email || '')) {
+    errors.email = 'Adresse email invalide.';
+  }
+  if (!form.commune) {
+    errors.commune = 'La commune est obligatoire.';
+  }
+  if (form.modeLivraison === 'delivery' && !form.address_1.trim()) {
+    errors.address_1 = 'Le quartier / adresse est obligatoire pour la livraison.';
+  }
+  return errors;
+}
 
 export function CheckoutPageClient() {
   const router = useRouter();
@@ -15,15 +109,25 @@ export function CheckoutPageClient() {
   const { items, subtotal, clearCart, hydrated } = useCart();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [mobileMoneySeed] = useState(() => Math.random().toString(36).slice(-4).toUpperCase());
 
+  const queryCommune = searchParams.get('commune');
+  const queryMode = searchParams.get('mode');
+  const initialCommune: SaegCommune = isSaegCommune(queryCommune) ? queryCommune : 'Libreville';
+  const initialMode: SaegDeliveryMode = isSaegDeliveryMode(queryMode) ? queryMode : 'delivery';
+
   const [form, setForm] = useState<SaegCheckoutForm>({
-    nom: '',
+    first_name: '',
+    last_name: '',
     telephone: '',
-    commune: (searchParams.get('commune') as SaegCommune) || 'Libreville',
-    adresse: '',
-    modeLivraison: (searchParams.get('mode') as SaegDeliveryMode) || 'delivery',
+    email: '',
+    commune: initialCommune,
+    address_1: '',
+    address_2: '',
+    country: 'GA',
+    modeLivraison: initialMode,
     creneau: 'matin',
     paiement: 'cash',
     note: '',
@@ -31,37 +135,113 @@ export function CheckoutPageClient() {
   });
 
   useEffect(() => {
-    if (form.modeLivraison === 'pickup') {
-      setForm((prev) => ({ ...prev }));
+    if (typeof window === 'undefined') {
+      return;
     }
-  }, [form.modeLivraison]);
+    const raw = window.localStorage.getItem(CHECKOUT_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as { updatedAt?: number; form?: Partial<SaegCheckoutForm> };
+      if (!parsed?.updatedAt || Date.now() - parsed.updatedAt > CHECKOUT_STORAGE_TTL_MS || !parsed.form) {
+        window.localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+        return;
+      }
+      setForm((prev) => ({
+        ...prev,
+        ...parsed.form,
+        commune: initialCommune,
+        modeLivraison: initialMode,
+        country: 'GA',
+      }));
+    } catch {
+      window.localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+    }
+  }, [initialCommune, initialMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const payload = {
+      updatedAt: Date.now(),
+      form: {
+        first_name: form.first_name,
+        last_name: form.last_name || '',
+        telephone: form.telephone,
+        email: form.email || '',
+        commune: form.commune,
+        address_1: form.address_1,
+        address_2: form.address_2 || '',
+        country: 'GA',
+        modeLivraison: form.modeLivraison,
+        creneau: form.creneau,
+        paiement: form.paiement,
+        note: form.note || '',
+        mobileMoneyPayerNumber: form.mobileMoneyPayerNumber || '',
+      },
+    };
+    window.localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(payload));
+  }, [form]);
 
   const shipping = getDeliveryFee(form.commune, form.modeLivraison);
   const total = subtotal + shipping;
 
   const canSubmit = useMemo(() => {
-    const hasMainFields = items.length > 0 && form.nom.trim() && form.telephone.trim() && form.adresse.trim();
-    if (!hasMainFields) {
+    if (items.length === 0) {
+      return false;
+    }
+    const next = trimForm(form);
+    const validationErrors = validateCheckoutForm(next);
+    if (Object.keys(validationErrors).length > 0) {
       return false;
     }
     if (form.paiement !== 'mobile_money') {
       return true;
     }
-    return Boolean(form.mobileMoneyPayerNumber?.trim()) && Boolean(paymentProofFile);
+    const payer = normalizeGabonPhone(form.mobileMoneyPayerNumber || '');
+    return Boolean(payer) && Boolean(paymentProofFile);
   }, [items.length, form, paymentProofFile]);
 
   async function submitOrder() {
     setError(null);
-    if (!canSubmit) {
-      setError('Veuillez compléter les informations obligatoires.');
+    setFieldErrors({});
+
+    const next = trimForm(form);
+    const validationErrors = validateCheckoutForm(next);
+    const normalizedPhone = normalizeGabonPhone(next.telephone);
+    if (Object.keys(validationErrors).length > 0 || !normalizedPhone) {
+      setFieldErrors(validationErrors);
+      setError('Veuillez corriger les champs obligatoires.');
       return;
     }
+    if (next.paiement === 'mobile_money') {
+      const normalizedPayer = normalizeGabonPhone(next.mobileMoneyPayerNumber || '');
+      if (!normalizedPayer) {
+        setFieldErrors((prev) => ({ ...prev, mobileMoneyPayerNumber: 'Numéro payeur invalide.' }));
+        setError('Le numéro Airtel/Moov du payeur est obligatoire.');
+        return;
+      }
+      if (!paymentProofFile) {
+        setError('La preuve de paiement est obligatoire pour Mobile Money.');
+        return;
+      }
+      next.mobileMoneyPayerNumber = normalizedPayer;
+    }
+
+    next.telephone = normalizedPhone;
+    next.email = next.email || EMAIL_FALLBACK;
+    if (next.modeLivraison === 'pickup' && !next.address_1) {
+      next.address_1 = PICKUP_ADDRESS;
+    }
+    next.country = 'GA';
 
     startTransition(async () => {
       try {
         const payload = new FormData();
         payload.append('items', JSON.stringify(items));
-        payload.append('form', JSON.stringify(form));
+        payload.append('form', JSON.stringify(next));
         if (paymentProofFile) {
           payload.append('payment_proof', paymentProofFile);
         }
@@ -73,13 +253,18 @@ export function CheckoutPageClient() {
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.error || 'Échec de la commande');
+          const message = data?.error || 'Échec de la commande';
+          const details = data?.body ? `\n${String(data.body)}` : '';
+          throw new Error(`${message}${details}`);
         }
 
         const order = data.order;
         clearCart();
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(CHECKOUT_STORAGE_KEY);
+        }
         router.push(
-          `/confirmation?orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(form.paiement)}&paymentRef=${encodeURIComponent(String(data.paymentReference || ''))}`
+          `/confirmation?orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(next.paiement)}&paymentRef=${encodeURIComponent(String(data.paymentReference || ''))}`
         );
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erreur de confirmation');
@@ -106,13 +291,24 @@ export function CheckoutPageClient() {
               1. Détails de Facturation & Livraison
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Nom complet *</label>
-                <input className="w-full rounded border-slate-200" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} placeholder="Ex: Jean Dupont" />
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Prénom *</label>
+                <input className="w-full rounded border-slate-200" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} placeholder="Ex: Jean" />
+                {fieldErrors.first_name ? <p className="mt-1 text-xs text-red-600">{fieldErrors.first_name}</p> : null}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Nom</label>
+                <input className="w-full rounded border-slate-200" value={form.last_name || ''} onChange={(e) => setForm({ ...form, last_name: e.target.value })} placeholder="Ex: Dupont" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Téléphone *</label>
                 <input className="w-full rounded border-slate-200" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} placeholder="077 00 00 00" />
+                {fieldErrors.telephone ? <p className="mt-1 text-xs text-red-600">{fieldErrors.telephone}</p> : null}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
+                <input className="w-full rounded border-slate-200" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="vous@email.com" />
+                {fieldErrors.email ? <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p> : null}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Commune *</label>
@@ -121,10 +317,22 @@ export function CheckoutPageClient() {
                   <option value="Akanda">Akanda</option>
                   <option value="Owendo">Owendo</option>
                 </select>
+                {fieldErrors.commune ? <p className="mt-1 text-xs text-red-600">{fieldErrors.commune}</p> : null}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Pays *</label>
+                <input className="w-full rounded border-slate-200 bg-slate-50" value="Gabon (GA)" readOnly />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Adresse *</label>
-                <textarea className="w-full rounded border-slate-200" rows={3} value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} placeholder="Quartier, repères, numéro de maison..." />
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Quartier / Adresse {form.modeLivraison === 'delivery' ? '*' : '(optionnel)'}
+                </label>
+                <textarea className="w-full rounded border-slate-200" rows={3} value={form.address_1} onChange={(e) => setForm({ ...form, address_1: e.target.value })} placeholder="Quartier, repères, numéro de maison..." />
+                {fieldErrors.address_1 ? <p className="mt-1 text-xs text-red-600">{fieldErrors.address_1}</p> : null}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Complément adresse</label>
+                <input className="w-full rounded border-slate-200" value={form.address_2 || ''} onChange={(e) => setForm({ ...form, address_2: e.target.value })} placeholder="Immeuble, étage, point de repère..." />
               </div>
             </div>
           </section>
@@ -209,6 +417,7 @@ export function CheckoutPageClient() {
                         onChange={(e) => setForm({ ...form, mobileMoneyPayerNumber: e.target.value })}
                         placeholder="Ex: 077 00 00 00"
                       />
+                      {fieldErrors.mobileMoneyPayerNumber ? <p className="mt-1 text-xs text-red-600">{fieldErrors.mobileMoneyPayerNumber}</p> : null}
                     </label>
                     <label className="space-y-2">
                       <span className="text-sm font-semibold text-slate-700">Preuve de paiement (image/pdf) *</span>

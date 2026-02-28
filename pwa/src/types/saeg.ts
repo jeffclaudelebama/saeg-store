@@ -56,10 +56,14 @@ export interface SaegCartItem {
 }
 
 export interface SaegCheckoutForm {
-  nom: string;
+  first_name: string;
+  last_name?: string;
   telephone: string;
+  email?: string;
   commune: SaegCommune;
-  adresse: string;
+  address_1: string;
+  address_2?: string;
+  country: 'GA';
   modeLivraison: SaegDeliveryMode;
   creneau: SaegDeliverySlot;
   paiement: SaegPaymentMethod;

@@ -24,10 +24,23 @@ function mapPayment(form: SaegCheckoutForm) {
   return { payment_method: 'cod', payment_method_title: 'Paiement à la livraison', set_paid: false };
 }
 
-function normalizePhone(phone: string): string {
+function normalizePhone(phone: string): string | null {
   const digits = phone.replace(/\D+/g, '');
-  if (digits.startsWith('241')) return `+${digits}`;
-  return `+241${digits}`;
+  if (!digits) {
+    return null;
+  }
+  let local = '';
+  if (digits.startsWith('241') && digits.length >= 11) {
+    local = digits.slice(3, 11);
+  } else if (digits.startsWith('0') && digits.length >= 9) {
+    local = digits.slice(1, 9);
+  } else if (digits.length === 8) {
+    local = digits;
+  }
+  if (!/^\d{8}$/.test(local)) {
+    return null;
+  }
+  return `241${local}`;
 }
 
 function splitName(fullName: string): { firstName: string; lastName: string } {
@@ -44,11 +57,40 @@ function splitName(fullName: string): { firstName: string; lastName: string } {
   };
 }
 
-function resolveOrderStatus(form: SaegCheckoutForm): 'on-hold' | 'processing' | 'pending' {
+function resolveOrderStatus(form: SaegCheckoutForm): 'on-hold' | 'pending' {
   if (form.paiement === 'mobile_money') {
     return 'on-hold';
   }
-  return env.orderStatusOnCreate === 'processing' ? 'processing' : 'pending';
+  return 'pending';
+}
+
+function normalizeCheckoutForm(input: SaegCheckoutForm & { nom?: string; adresse?: string }): SaegCheckoutForm {
+  const firstName = (input.first_name || '').trim();
+  const lastName = (input.last_name || '').trim();
+  let normalizedFirstName = firstName;
+  let normalizedLastName = lastName;
+
+  if (!normalizedFirstName && input.nom) {
+    const split = splitName(input.nom);
+    normalizedFirstName = split.firstName;
+    normalizedLastName = split.lastName;
+  }
+
+  return {
+    first_name: normalizedFirstName,
+    last_name: normalizedLastName,
+    telephone: (input.telephone || '').trim(),
+    email: (input.email || '').trim(),
+    commune: input.commune,
+    address_1: (input.address_1 || input.adresse || '').trim(),
+    address_2: (input.address_2 || '').trim(),
+    country: 'GA',
+    modeLivraison: input.modeLivraison,
+    creneau: input.creneau,
+    paiement: input.paiement,
+    note: (input.note || '').trim(),
+    mobileMoneyPayerNumber: (input.mobileMoneyPayerNumber || '').trim(),
+  };
 }
 
 class WooOrderError extends Error {
@@ -195,15 +237,35 @@ export async function POST(request: Request) {
   if (!parsed || !Array.isArray(parsed.items) || !parsed.form) {
     return NextResponse.json({ error: 'Payload invalide' }, { status: 400 });
   }
+  const form = normalizeCheckoutForm(parsed.form as SaegCheckoutForm & { nom?: string; adresse?: string });
 
   if (parsed.items.length === 0) {
     return NextResponse.json({ error: 'Panier vide' }, { status: 400 });
   }
 
-  if (parsed.form.paiement === 'mobile_money') {
-    if (!parsed.form.mobileMoneyPayerNumber?.trim()) {
+  if (!form.first_name.trim()) {
+    return NextResponse.json({ error: 'Le prénom est obligatoire.' }, { status: 422 });
+  }
+  if (!form.commune) {
+    return NextResponse.json({ error: 'La commune est obligatoire.' }, { status: 422 });
+  }
+  if (form.modeLivraison === 'delivery' && !form.address_1.trim()) {
+    return NextResponse.json({ error: 'Le quartier / adresse est obligatoire pour la livraison.' }, { status: 422 });
+  }
+  const normalizedBillingPhone = normalizePhone(form.telephone);
+  if (!normalizedBillingPhone) {
+    return NextResponse.json({ error: 'Téléphone invalide. Format attendu: 241XXXXXXXX.' }, { status: 422 });
+  }
+
+  if (form.paiement === 'mobile_money') {
+    if (!form.mobileMoneyPayerNumber?.trim()) {
       return NextResponse.json({ error: 'Numéro Airtel/Moov du payeur requis.' }, { status: 422 });
     }
+    const normalizedPayerNumber = normalizePhone(form.mobileMoneyPayerNumber);
+    if (!normalizedPayerNumber) {
+      return NextResponse.json({ error: 'Numéro Airtel/Moov invalide. Format attendu: 241XXXXXXXX.' }, { status: 422 });
+    }
+    form.mobileMoneyPayerNumber = normalizedPayerNumber;
     if (!parsed.paymentProof) {
       return NextResponse.json({ error: 'Preuve de paiement requise pour Mobile Money.' }, { status: 422 });
     }
@@ -221,81 +283,107 @@ export async function POST(request: Request) {
   const validation = validateCartAgainstProducts({
     items: parsed.items,
     products,
-    commune: parsed.form.commune,
-    modeLivraison: parsed.form.modeLivraison,
+    commune: form.commune,
+    modeLivraison: form.modeLivraison,
   });
 
   if (!validation.valid) {
     return NextResponse.json({ error: 'Panier invalide', validation }, { status: 422 });
   }
 
-  const phone = normalizePhone(parsed.form.telephone);
-  const { firstName, lastName } = splitName(parsed.form.nom);
+  const lineItems = parsed.items.map((item) => {
+    if (item.unitType === 'kg') {
+      return {
+        product_id: item.productId,
+        quantity: 1,
+        meta_data: [
+          { key: '_saeg_unit_type', value: 'kg' },
+          { key: '_saeg_weight_kg', value: String(item.quantity) },
+        ],
+      };
+    }
 
-  const lineItems = parsed.items.map((item) => ({
-    product_id: item.productId,
-    quantity: item.quantity,
-    meta_data: item.unitType === 'kg' ? [{ key: 'saeg_requested_weight_kg', value: String(item.quantity) }] : [],
-  }));
+    return {
+      product_id: item.productId,
+      quantity: item.quantity,
+    };
+  });
 
   const shippingLines = [
     {
-      method_id: parsed.form.modeLivraison === 'pickup' ? 'local_pickup' : 'flat_rate',
+      method_id: form.modeLivraison === 'pickup' ? 'local_pickup' : 'flat_rate',
       method_title: validation.shippingLabel,
-      total: String(validation.shipping),
+      total: form.modeLivraison === 'pickup' ? '0' : String(validation.shipping),
     },
   ];
 
   const metaData = [
-    { key: 'saeg_commune', value: parsed.form.commune },
-    { key: 'saeg_mode_livraison', value: parsed.form.modeLivraison },
-    { key: 'saeg_creneau', value: parsed.form.creneau },
-    { key: 'saeg_paiement', value: parsed.form.paiement },
+    { key: 'saeg_commune', value: form.commune },
+    { key: 'saeg_mode_livraison', value: form.modeLivraison },
+    { key: 'saeg_creneau', value: form.creneau },
+    { key: 'saeg_paiement', value: form.paiement },
     { key: 'saeg_mobile_money_code_agent', value: 'SAEG' },
-    { key: 'saeg_mobile_money_payer_number', value: parsed.form.mobileMoneyPayerNumber || '' },
+    { key: 'saeg_mobile_money_payer_number', value: form.mobileMoneyPayerNumber || '' },
     { key: 'saeg_source', value: 'pwa' },
   ];
 
+  const billing = {
+    first_name: form.first_name,
+    last_name: form.last_name || '',
+    phone: normalizedBillingPhone,
+    email: form.email || 'store@saeggabon.ga',
+    address_1: form.address_1 || (form.modeLivraison === 'pickup' ? 'Retrait marché SAEG' : ''),
+    address_2: form.address_2 || '',
+    city: form.commune,
+    country: 'GA',
+  };
+
+  const shipping =
+    form.modeLivraison === 'pickup'
+      ? {
+          first_name: billing.first_name,
+          last_name: billing.last_name,
+          phone: billing.phone,
+          address_1: 'Retrait Marché SAEG',
+          address_2: '',
+          city: 'Libreville',
+          country: 'GA',
+        }
+      : {
+          first_name: billing.first_name,
+          last_name: billing.last_name,
+          phone: billing.phone,
+          address_1: billing.address_1,
+          address_2: billing.address_2,
+          city: billing.city,
+          country: 'GA',
+        };
+
   const orderPayload = {
-    status: resolveOrderStatus(parsed.form),
+    status: resolveOrderStatus(form),
     currency: 'XAF',
-    billing: {
-      first_name: firstName,
-      last_name: lastName,
-      phone,
-      email: '',
-      address_1: parsed.form.adresse,
-      city: 'Libreville',
-      country: 'GA',
-    },
-    shipping: {
-      first_name: firstName,
-      last_name: lastName,
-      phone,
-      address_1: parsed.form.adresse,
-      city: 'Libreville',
-      country: 'GA',
-    },
+    billing,
+    shipping,
     customer_note:
-      parsed.form.paiement === 'mobile_money'
-        ? [parsed.form.note, 'Paiement Mobile Money sélectionné.'].filter(Boolean).join(' | ')
-        : parsed.form.note || `${parsed.form.modeLivraison === 'pickup' ? 'Retrait' : 'Livraison'} - Créneau: ${parsed.form.creneau}`,
+      form.paiement === 'mobile_money'
+        ? [form.note, 'Paiement Mobile Money sélectionné.'].filter(Boolean).join(' | ')
+        : form.note || `${form.modeLivraison === 'pickup' ? 'Retrait' : 'Livraison'} - Créneau: ${form.creneau}`,
     line_items: lineItems,
     shipping_lines: shippingLines,
     meta_data: metaData,
-    ...mapPayment(parsed.form),
+    ...mapPayment(form),
   };
 
   if (!hasWooEnv()) {
     const fakeId = Math.floor(Date.now() / 1000);
-    const paymentReference = parsed.form.paiement === 'mobile_money' ? buildMobileMoneyReference(fakeId) : '';
+    const paymentReference = form.paiement === 'mobile_money' ? buildMobileMoneyReference(fakeId) : '';
     return NextResponse.json({
       ok: true,
       mock: true,
       order: {
         id: fakeId,
         number: String(fakeId),
-        status: parsed.form.paiement === 'mobile_money' ? 'on-hold' : 'pending',
+        status: form.paiement === 'mobile_money' ? 'on-hold' : 'pending',
         total: validation.total,
         currency: 'XAF',
         created_at: new Date().toISOString(),
@@ -312,9 +400,9 @@ export async function POST(request: Request) {
     let proofUploadResult: unknown = null;
     let warning: string | undefined;
 
-    if (parsed.form.paiement === 'mobile_money') {
+    if (form.paiement === 'mobile_money') {
       paymentReference = buildMobileMoneyReference(Number(order.id));
-      const payerNumber = parsed.form.mobileMoneyPayerNumber?.trim() || '';
+      const payerNumber = form.mobileMoneyPayerNumber?.trim() || '';
 
       await updateOrderMeta(Number(order.id), [
         { key: 'saeg_mobile_money_reference', value: paymentReference },
@@ -350,6 +438,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: 'WooCommerce order creation failed',
+          ok: false,
           status: error.status,
           body: error.body,
         },
