@@ -23,11 +23,12 @@ export async function wooFetch<T>(path: string, init: RequestInit & { revalidate
   }
 
   const { revalidate = REVALIDATE_PRODUCTS_SECONDS, headers, ...rest } = init;
+  const isFormDataBody = typeof FormData !== 'undefined' && rest.body instanceof FormData;
   const res = await fetch(`${baseUrl()}${path}`, {
     ...rest,
     headers: {
       Authorization: authHeader(),
-      'Content-Type': 'application/json',
+      ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     },
     next: rest.method && rest.method !== 'GET' ? { revalidate: 0 } : { revalidate },

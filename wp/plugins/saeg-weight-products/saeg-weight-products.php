@@ -24,7 +24,13 @@ if (!class_exists('SAEG_Weight_Products')) {
         private const META_DAILY_SURPLUS = 'saeg_is_daily_surplus';
         private const META_ORIGIN = 'saeg_origin';
         private const ORDER_STOCK_STATE = '_saeg_stock_kg_state';
+        private const ORDER_META_MOBILE_MONEY_REFERENCE = 'saeg_mobile_money_reference';
+        private const ORDER_META_MOBILE_MONEY_PAYER_NUMBER = 'saeg_mobile_money_payer_number';
+        private const ORDER_META_MOBILE_MONEY_PROOF_ID = 'saeg_mobile_money_proof_id';
+        private const ORDER_META_MOBILE_MONEY_STATUS = 'saeg_mobile_money_status';
+        private const ORDER_META_MOBILE_MONEY_PAID_AT = 'saeg_mobile_money_paid_at';
         private const DASHBOARD_DISCOUNT_NONCE = 'saeg_apply_daily_discount';
+        private const MARK_MOBILE_MONEY_PAID_ACTION = 'saeg_mark_mobile_money_paid';
         private const REST_NAMESPACE = 'saeg/v1';
         private const CONTACT_PHONE = '011453040';
         private const CONTACT_WHATSAPP = '24177638864';
@@ -75,9 +81,11 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             add_action('wp_dashboard_setup', [__CLASS__, 'register_dashboard_widget']);
             add_action('admin_post_saeg_apply_daily_discount', [__CLASS__, 'handle_daily_discount_action']);
+            add_action('admin_post_' . self::MARK_MOBILE_MONEY_PAID_ACTION, [__CLASS__, 'handle_mark_mobile_money_paid']);
 
             add_filter('woocommerce_rest_prepare_product_object', [__CLASS__, 'append_rest_fields_to_wc_response'], 10, 3);
             add_action('woocommerce_email_after_order_table', [__CLASS__, 'render_checkout_email_notices'], 20, 4);
+            add_action('woocommerce_admin_order_data_after_order_details', [__CLASS__, 'render_mobile_money_admin_panel']);
         }
 
         public static function register_meta(): void {
@@ -140,6 +148,17 @@ if (!class_exists('SAEG_Weight_Products')) {
                 ],
                 'callback' => [__CLASS__, 'rest_get_product'],
             ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/orders/(?P<id>\d+)/payment-proof', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
+                'args' => [
+                    'id' => ['type' => 'integer', 'required' => true],
+                    'payment_reference' => ['type' => 'string', 'required' => true],
+                    'payer_number' => ['type' => 'string', 'required' => false],
+                ],
+                'callback' => [__CLASS__, 'rest_upload_payment_proof'],
+            ]);
         }
 
         public static function rest_list_products(WP_REST_Request $request): WP_REST_Response {
@@ -201,6 +220,105 @@ if (!class_exists('SAEG_Weight_Products')) {
             }
 
             return new WP_REST_Response(self::serialize_product($product));
+        }
+
+        public static function rest_can_manage_orders(WP_REST_Request $request) {
+            if (current_user_can('edit_shop_orders')) {
+                return true;
+            }
+
+            $user_id = self::authenticate_woo_api_user();
+            if ($user_id > 0 && user_can($user_id, 'edit_shop_orders')) {
+                wp_set_current_user($user_id);
+                return true;
+            }
+
+            return new WP_Error('saeg_forbidden', __('Accès non autorisé.', 'saeg-weight-products'), ['status' => 401]);
+        }
+
+        public static function rest_upload_payment_proof(WP_REST_Request $request) {
+            if (!function_exists('wc_get_order')) {
+                return new WP_REST_Response(['error' => 'WooCommerce non actif'], 500);
+            }
+
+            $order = wc_get_order((int) $request['id']);
+            if (!$order) {
+                return new WP_REST_Response(['error' => 'Commande introuvable'], 404);
+            }
+
+            $payment_reference = sanitize_text_field((string) $request->get_param('payment_reference'));
+            if ($payment_reference === '') {
+                return new WP_REST_Response(['error' => 'Référence de paiement manquante'], 400);
+            }
+
+            $payer_number = sanitize_text_field((string) $request->get_param('payer_number'));
+
+            if (!isset($_FILES['proof']) || !is_array($_FILES['proof'])) {
+                return new WP_REST_Response(['error' => 'Fichier de preuve manquant'], 400);
+            }
+
+            $file = $_FILES['proof'];
+            if (!empty($file['error'])) {
+                return new WP_REST_Response(['error' => 'Upload invalide (' . (int) $file['error'] . ')'], 400);
+            }
+
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $uploaded = wp_handle_upload($file, [
+                'test_form' => false,
+                'mimes' => [
+                    'jpg|jpeg|jpe' => 'image/jpeg',
+                    'png' => 'image/png',
+                    'webp' => 'image/webp',
+                    'pdf' => 'application/pdf',
+                ],
+            ]);
+
+            if (!is_array($uploaded) || isset($uploaded['error'])) {
+                $message = is_array($uploaded) ? (string) ($uploaded['error'] ?? 'Upload impossible') : 'Upload impossible';
+                return new WP_REST_Response(['error' => $message], 422);
+            }
+
+            $attachment = [
+                'post_mime_type' => (string) ($uploaded['type'] ?? ''),
+                'post_title' => sanitize_file_name((string) pathinfo((string) ($uploaded['file'] ?? ''), PATHINFO_FILENAME)),
+                'post_content' => '',
+                'post_status' => 'inherit',
+            ];
+
+            $attachment_id = wp_insert_attachment($attachment, (string) $uploaded['file']);
+            if (is_wp_error($attachment_id)) {
+                return new WP_REST_Response(['error' => $attachment_id->get_error_message()], 500);
+            }
+
+            $metadata = wp_generate_attachment_metadata((int) $attachment_id, (string) $uploaded['file']);
+            if (is_array($metadata)) {
+                wp_update_attachment_metadata((int) $attachment_id, $metadata);
+            }
+
+            $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_REFERENCE, $payment_reference);
+            $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_PAYER_NUMBER, $payer_number);
+            $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_PROOF_ID, (int) $attachment_id);
+            if ((string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_STATUS, true) === '') {
+                $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_STATUS, 'pending_verification');
+            }
+            $order->save();
+
+            $note = sprintf(
+                'Preuve Mobile Money ajoutée. Référence: %s. Numéro payeur: %s.',
+                $payment_reference,
+                $payer_number !== '' ? $payer_number : 'N/A'
+            );
+            $order->add_order_note($note, false);
+
+            return new WP_REST_Response([
+                'ok' => true,
+                'attachment_id' => (int) $attachment_id,
+                'attachment_url' => wp_get_attachment_url((int) $attachment_id),
+                'payment_reference' => $payment_reference,
+            ]);
         }
 
         public static function render_general_fields(): void {
@@ -765,19 +883,114 @@ if (!class_exists('SAEG_Weight_Products')) {
                 return;
             }
 
+            $reference = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_REFERENCE, true);
+            $payer_number = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_PAYER_NUMBER, true);
+
             if ($plain_text) {
                 echo "\nPaiement Mobile Money\n";
                 echo "Airtel Money — Code agent : SAEG\n";
                 echo "Moov Money — Code agent : SAEG (bientôt disponible)\n";
+                if ($reference !== '') {
+                    echo 'Référence : ' . $reference . "\n";
+                }
+                if ($payer_number !== '') {
+                    echo 'Numéro payeur : ' . $payer_number . "\n";
+                }
             } else {
                 echo '<div style="margin:18px 0;padding:12px;border:1px solid #b7dfc6;background:#f3fbf6;border-radius:8px;">';
                 echo '<p style="margin:0 0 8px;font-weight:700;color:#1B7F3A;">Paiement Mobile Money</p>';
                 echo '<p style="margin:0;font-size:13px;line-height:1.6;color:#0f172a;">';
                 echo 'Airtel Money — Code agent : SAEG<br />';
                 echo 'Moov Money — Code agent : SAEG (bientôt disponible)';
+                if ($reference !== '') {
+                    echo '<br />Référence : <strong>' . esc_html($reference) . '</strong>';
+                }
+                if ($payer_number !== '') {
+                    echo '<br />Numéro payeur : ' . esc_html($payer_number);
+                }
                 echo '</p>';
                 echo '</div>';
             }
+        }
+
+        public static function render_mobile_money_admin_panel($order): void {
+            if (!is_a($order, 'WC_Order')) {
+                return;
+            }
+
+            $payment = (string) $order->get_meta('saeg_paiement');
+            if ($payment !== 'mobile_money') {
+                return;
+            }
+
+            $reference = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_REFERENCE, true);
+            $payer_number = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_PAYER_NUMBER, true);
+            $proof_id = (int) $order->get_meta(self::ORDER_META_MOBILE_MONEY_PROOF_ID, true);
+            $status = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_STATUS, true);
+            $paid_at = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_PAID_AT, true);
+            $proof_url = $proof_id > 0 ? wp_get_attachment_url($proof_id) : '';
+
+            echo '<div class="order_data_column" style="width:100%;">';
+            echo '<h3 style="margin-top:16px;">Paiement Mobile Money SAEG</h3>';
+            echo '<p><strong>Référence :</strong> ' . esc_html($reference !== '' ? $reference : '—') . '</p>';
+            echo '<p><strong>Numéro payeur :</strong> ' . esc_html($payer_number !== '' ? $payer_number : '—') . '</p>';
+            echo '<p><strong>Statut :</strong> ' . esc_html($status !== '' ? $status : 'pending_verification') . '</p>';
+            if ($paid_at !== '') {
+                echo '<p><strong>Payé le :</strong> ' . esc_html($paid_at) . '</p>';
+            }
+            if ($proof_url !== '') {
+                echo '<p><strong>Preuve :</strong> <a href="' . esc_url($proof_url) . '" target="_blank" rel="noopener">Voir la pièce jointe</a></p>';
+            } else {
+                echo '<p><strong>Preuve :</strong> Aucune</p>';
+            }
+
+            if ($status !== 'paid') {
+                $url = wp_nonce_url(
+                    add_query_arg(
+                        [
+                            'action' => self::MARK_MOBILE_MONEY_PAID_ACTION,
+                            'order_id' => $order->get_id(),
+                        ],
+                        admin_url('admin-post.php')
+                    ),
+                    self::MARK_MOBILE_MONEY_PAID_ACTION . '_' . $order->get_id()
+                );
+                echo '<p><a class="button button-primary" href="' . esc_url($url) . '">Marquer payé</a></p>';
+            } else {
+                echo '<p><span class="button disabled" style="pointer-events:none;">Paiement déjà validé</span></p>';
+            }
+            echo '</div>';
+        }
+
+        public static function handle_mark_mobile_money_paid(): void {
+            if (!current_user_can('edit_shop_orders')) {
+                wp_die(esc_html__('Accès refusé.', 'saeg-weight-products'));
+            }
+
+            $order_id = isset($_GET['order_id']) ? absint(wp_unslash($_GET['order_id'])) : 0;
+            if ($order_id <= 0) {
+                wp_die(esc_html__('Commande invalide.', 'saeg-weight-products'));
+            }
+
+            check_admin_referer(self::MARK_MOBILE_MONEY_PAID_ACTION . '_' . $order_id);
+
+            $order = wc_get_order($order_id);
+            if (!$order) {
+                wp_die(esc_html__('Commande introuvable.', 'saeg-weight-products'));
+            }
+
+            $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_STATUS, 'paid');
+            $order->update_meta_data(self::ORDER_META_MOBILE_MONEY_PAID_AT, current_time('mysql'));
+            $order->save();
+
+            if ($order->get_status() === 'on-hold') {
+                $order->update_status('processing', 'Paiement Mobile Money validé manuellement par SAEG.');
+            } else {
+                $order->add_order_note('Paiement Mobile Money validé manuellement par SAEG.', false);
+            }
+
+            wp_safe_redirect($order->get_edit_order_url());
+            exit;
         }
 
         private static function collect_order_weight_quantities(WC_Order $order): array {
@@ -972,6 +1185,68 @@ if (!class_exists('SAEG_Weight_Products')) {
             }
             $value = str_replace(',', '.', (string) $value);
             return is_numeric($value) ? (float) $value : 0.0;
+        }
+
+        private static function authenticate_woo_api_user(): int {
+            if (!function_exists('wc_api_hash')) {
+                return 0;
+            }
+
+            $auth = '';
+            if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+                $auth = (string) wp_unslash($_SERVER['HTTP_AUTHORIZATION']);
+            } elseif (isset($_SERVER['Authorization'])) {
+                $auth = (string) wp_unslash($_SERVER['Authorization']);
+            }
+
+            if ($auth === '' && function_exists('apache_request_headers')) {
+                $headers = apache_request_headers();
+                if (is_array($headers) && isset($headers['Authorization'])) {
+                    $auth = (string) $headers['Authorization'];
+                }
+            }
+
+            if ($auth === '' || stripos($auth, 'basic ') !== 0) {
+                return 0;
+            }
+
+            $encoded = trim(substr($auth, 6));
+            $decoded = base64_decode($encoded);
+            if (!is_string($decoded) || strpos($decoded, ':') === false) {
+                return 0;
+            }
+
+            [$consumer_key, $consumer_secret] = explode(':', $decoded, 2);
+            $consumer_key = sanitize_text_field($consumer_key);
+            $consumer_secret = sanitize_text_field($consumer_secret);
+
+            if ($consumer_key === '' || $consumer_secret === '' || strpos($consumer_key, 'ck_') !== 0) {
+                return 0;
+            }
+
+            global $wpdb;
+            $table = $wpdb->prefix . 'woocommerce_api_keys';
+            $row = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT user_id, permissions, consumer_secret FROM {$table} WHERE consumer_key = %s LIMIT 1",
+                    wc_api_hash($consumer_key)
+                )
+            );
+
+            if (!$row || empty($row->consumer_secret)) {
+                return 0;
+            }
+
+            if (!hash_equals((string) $row->consumer_secret, $consumer_secret)) {
+                return 0;
+            }
+
+            $permissions = (string) $row->permissions;
+            if (!in_array($permissions, ['read_write', 'write'], true)) {
+                return 0;
+            }
+
+            return (int) $row->user_id;
         }
 
         private static function register_supervisor_role(): void {

@@ -8,6 +8,7 @@ export default function ConfirmationPage({ searchParams }: { searchParams?: Reco
   const orderNumber = typeof searchParams?.orderNumber === 'string' ? searchParams.orderNumber : '';
   const total = Number(typeof searchParams?.total === 'string' ? searchParams.total : '0') || 0;
   const payment = typeof searchParams?.payment === 'string' ? searchParams.payment : 'cash';
+  const paymentRef = typeof searchParams?.paymentRef === 'string' ? searchParams.paymentRef : '';
   const isMobileMoney = payment === 'mobile_money';
   const whatsappLink = `https://wa.me/${SAEG_WHATSAPP_INTL}?text=${encodeURIComponent(`Bonjour SAEG, je confirme la commande #${orderNumber || '...'}.`)}`;
 
@@ -35,10 +36,15 @@ export default function ConfirmationPage({ searchParams }: { searchParams?: Reco
           {isMobileMoney ? (
             <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 p-4 text-left">
               <p className="text-sm font-bold text-primary">Paiement Mobile Money</p>
+              {paymentRef ? (
+                <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary/80">
+                  Référence: {paymentRef}
+                </p>
+              ) : null}
               <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : SAEG</p>
               <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : SAEG (bientôt disponible)</p>
               <p className="mt-3 text-xs text-slate-600">
-                Après validation de la commande, merci d&apos;effectuer le paiement Airtel Money avec le code agent SAEG, puis de nous envoyer la preuve sur WhatsApp.
+                Après validation de la commande, merci d&apos;effectuer le paiement Airtel Money avec le code agent SAEG puis d&apos;ajouter la preuve si ce n&apos;est pas déjà fait.
               </p>
             </div>
           ) : null}

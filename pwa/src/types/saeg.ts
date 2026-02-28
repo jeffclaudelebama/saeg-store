@@ -64,6 +64,7 @@ export interface SaegCheckoutForm {
   creneau: SaegDeliverySlot;
   paiement: SaegPaymentMethod;
   note?: string;
+  mobileMoneyPayerNumber?: string;
 }
 
 export interface SaegCartValidationLine {

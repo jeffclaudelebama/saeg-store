@@ -8,13 +8,20 @@ import type { SaegCartItem, SaegCheckoutForm, SaegProduct } from '@/types/saeg';
 interface CheckoutPayload {
   items: SaegCartItem[];
   form: SaegCheckoutForm;
+  paymentProof?: File | null;
+}
+
+interface ParsedRequestBody {
+  items: SaegCartItem[];
+  form: SaegCheckoutForm;
+  paymentProof: File | null;
 }
 
 function mapPayment(form: SaegCheckoutForm) {
   if (form.paiement === 'mobile_money') {
     return { payment_method: 'saeg_mobile_money', payment_method_title: 'Mobile Money', set_paid: false };
   }
-  return { payment_method: 'cod', payment_method_title: 'Paiement à la livraison', set_paid: false };
+  return { payment_method: 'cod', payment_method_title: 'Cash à la livraison', set_paid: false };
 }
 
 function normalizePhone(phone: string): string {
@@ -23,33 +30,147 @@ function normalizePhone(phone: string): string {
   return `+241${digits}`;
 }
 
+function random4(): string {
+  return Math.random().toString(36).slice(-4).toUpperCase();
+}
+
+function buildMobileMoneyReference(orderId: number): string {
+  return `SAEG-${orderId}-${random4()}`;
+}
+
+function toStringValue(value: FormDataEntryValue | null): string {
+  return typeof value === 'string' ? value : '';
+}
+
+async function parseBody(request: Request): Promise<ParsedRequestBody | null> {
+  const contentType = request.headers.get('content-type') ?? '';
+
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await request.formData();
+    const itemsRaw = toStringValue(formData.get('items'));
+    const formRaw = toStringValue(formData.get('form'));
+    let items: SaegCartItem[] = [];
+    let form: SaegCheckoutForm | null = null;
+    try {
+      items = JSON.parse(itemsRaw) as SaegCartItem[];
+      form = JSON.parse(formRaw) as SaegCheckoutForm;
+    } catch {
+      return null;
+    }
+    const proofEntry = formData.get('payment_proof');
+    const paymentProof = proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
+    return { items, form, paymentProof };
+  }
+
+  const jsonBody = (await request.json().catch(() => null)) as CheckoutPayload | null;
+  if (!jsonBody) {
+    return null;
+  }
+  return {
+    items: Array.isArray(jsonBody.items) ? jsonBody.items : [],
+    form: jsonBody.form,
+    paymentProof: jsonBody.paymentProof ?? null,
+  };
+}
+
+function isAllowedProofFile(file: File): boolean {
+  const allowedMime = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/pdf',
+  ]);
+  if (allowedMime.has(file.type)) {
+    return true;
+  }
+  const lowerName = file.name.toLowerCase();
+  return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp') || lowerName.endsWith('.pdf');
+}
+
+function mobileMoneyNote(reference: string): string {
+  return `Référence Mobile Money: ${reference} | Airtel Money — Code agent : SAEG | Moov Money — Code agent : SAEG (bientôt disponible).`;
+}
+
+async function createInternalOrderNote(orderId: number, note: string) {
+  await wooFetch(`/wp-json/wc/v3/orders/${orderId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({
+      note,
+      customer_note: false,
+    }),
+    revalidate: 0,
+  });
+}
+
+async function updateOrderMeta(orderId: number, payload: Array<{ key: string; value: string }>) {
+  await wooFetch(`/wp-json/wc/v3/orders/${orderId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      meta_data: payload,
+    }),
+    revalidate: 0,
+  });
+}
+
+async function uploadPaymentProof(orderId: number, reference: string, payerNumber: string, file: File) {
+  const formData = new FormData();
+  formData.append('proof', file, file.name);
+  formData.append('payment_reference', reference);
+  formData.append('payer_number', payerNumber);
+
+  return wooFetch<{
+    ok: boolean;
+    attachment_id?: number;
+    attachment_url?: string;
+  }>(`/wp-json/saeg/v1/orders/${orderId}/payment-proof`, {
+    method: 'POST',
+    body: formData,
+    revalidate: 0,
+  });
+}
+
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as CheckoutPayload | null;
-  if (!body || !Array.isArray(body.items) || !body.form) {
+  const parsed = await parseBody(request);
+  if (!parsed || !Array.isArray(parsed.items) || !parsed.form) {
     return NextResponse.json({ error: 'Payload invalide' }, { status: 400 });
   }
 
-  if (body.items.length === 0) {
+  if (parsed.items.length === 0) {
     return NextResponse.json({ error: 'Panier vide' }, { status: 400 });
   }
 
-  const ids = Array.from(new Set(body.items.map((i) => i.productId)));
+  if (parsed.form.paiement === 'mobile_money') {
+    if (!parsed.form.mobileMoneyPayerNumber?.trim()) {
+      return NextResponse.json({ error: 'Numéro Airtel/Moov du payeur requis.' }, { status: 422 });
+    }
+    if (!parsed.paymentProof) {
+      return NextResponse.json({ error: 'Preuve de paiement requise pour Mobile Money.' }, { status: 422 });
+    }
+    if (!isAllowedProofFile(parsed.paymentProof)) {
+      return NextResponse.json({ error: 'Format de preuve non supporté (image ou PDF uniquement).' }, { status: 422 });
+    }
+    if (parsed.paymentProof.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'La preuve de paiement dépasse 10 MB.' }, { status: 422 });
+    }
+  }
+
+  const ids = Array.from(new Set(parsed.items.map((i) => i.productId)));
   const productResults = await Promise.all(ids.map((id) => getProductServer(id)));
   const products = productResults.filter((product): product is SaegProduct => product !== null);
   const validation = validateCartAgainstProducts({
-    items: body.items,
+    items: parsed.items,
     products,
-    commune: body.form.commune,
-    modeLivraison: body.form.modeLivraison,
+    commune: parsed.form.commune,
+    modeLivraison: parsed.form.modeLivraison,
   });
 
   if (!validation.valid) {
     return NextResponse.json({ error: 'Panier invalide', validation }, { status: 422 });
   }
 
-  const phone = normalizePhone(body.form.telephone);
+  const phone = normalizePhone(parsed.form.telephone);
 
-  const lineItems = body.items.map((item) => ({
+  const lineItems = parsed.items.map((item) => ({
     product_id: item.productId,
     quantity: item.quantity,
     meta_data: item.unitType === 'kg' ? [{ key: 'saeg_requested_weight_kg', value: String(item.quantity) }] : [],
@@ -57,65 +178,67 @@ export async function POST(request: Request) {
 
   const shippingLines = [
     {
-      method_id: body.form.modeLivraison === 'pickup' ? 'local_pickup' : 'flat_rate',
+      method_id: parsed.form.modeLivraison === 'pickup' ? 'local_pickup' : 'flat_rate',
       method_title: validation.shippingLabel,
       total: String(validation.shipping),
     },
   ];
 
-  const mobileMoneyNote = 'Paiement Mobile Money: Airtel Money — Code agent : SAEG. Moov Money — Code agent : SAEG (bientôt disponible).';
   const metaData = [
-    { key: 'saeg_commune', value: body.form.commune },
-    { key: 'saeg_mode_livraison', value: body.form.modeLivraison },
-    { key: 'saeg_creneau', value: body.form.creneau },
-    { key: 'saeg_paiement', value: body.form.paiement },
+    { key: 'saeg_commune', value: parsed.form.commune },
+    { key: 'saeg_mode_livraison', value: parsed.form.modeLivraison },
+    { key: 'saeg_creneau', value: parsed.form.creneau },
+    { key: 'saeg_paiement', value: parsed.form.paiement },
     { key: 'saeg_mobile_money_code_agent', value: 'SAEG' },
+    { key: 'saeg_mobile_money_payer_number', value: parsed.form.mobileMoneyPayerNumber || '' },
     { key: 'saeg_source', value: 'pwa' },
   ];
 
   const orderPayload = {
-    status: env.orderStatusOnCreate || 'pending',
+    status: parsed.form.paiement === 'mobile_money' ? 'on-hold' : env.orderStatusOnCreate || 'pending',
     currency: 'XAF',
     billing: {
-      first_name: body.form.nom.split(' ').slice(0, 1).join(' '),
-      last_name: body.form.nom.split(' ').slice(1).join(' '),
+      first_name: parsed.form.nom.split(' ').slice(0, 1).join(' '),
+      last_name: parsed.form.nom.split(' ').slice(1).join(' '),
       phone,
       email: '',
-      address_1: body.form.adresse,
-      city: body.form.commune,
+      address_1: parsed.form.adresse,
+      city: parsed.form.commune,
       country: 'GA',
     },
     shipping: {
-      first_name: body.form.nom.split(' ').slice(0, 1).join(' '),
-      last_name: body.form.nom.split(' ').slice(1).join(' '),
+      first_name: parsed.form.nom.split(' ').slice(0, 1).join(' '),
+      last_name: parsed.form.nom.split(' ').slice(1).join(' '),
       phone,
-      address_1: body.form.adresse,
-      city: body.form.commune,
+      address_1: parsed.form.adresse,
+      city: parsed.form.commune,
       country: 'GA',
     },
     customer_note:
-      body.form.paiement === 'mobile_money'
-        ? [body.form.note, mobileMoneyNote].filter(Boolean).join(' | ')
-        : body.form.note || `${body.form.modeLivraison === 'pickup' ? 'Retrait' : 'Livraison'} - Créneau: ${body.form.creneau}`,
+      parsed.form.paiement === 'mobile_money'
+        ? [parsed.form.note, 'Paiement Mobile Money sélectionné.'].filter(Boolean).join(' | ')
+        : parsed.form.note || `${parsed.form.modeLivraison === 'pickup' ? 'Retrait' : 'Livraison'} - Créneau: ${parsed.form.creneau}`,
     line_items: lineItems,
     shipping_lines: shippingLines,
     meta_data: metaData,
-    ...mapPayment(body.form),
+    ...mapPayment(parsed.form),
   };
 
   if (!hasWooEnv()) {
     const fakeId = Math.floor(Date.now() / 1000);
+    const paymentReference = parsed.form.paiement === 'mobile_money' ? buildMobileMoneyReference(fakeId) : '';
     return NextResponse.json({
       ok: true,
       mock: true,
       order: {
         id: fakeId,
         number: String(fakeId),
-        status: 'pending',
+        status: parsed.form.paiement === 'mobile_money' ? 'on-hold' : 'pending',
         total: validation.total,
         currency: 'XAF',
         created_at: new Date().toISOString(),
       },
+      paymentReference,
       validation,
     });
   }
@@ -127,7 +250,43 @@ export async function POST(request: Request) {
       revalidate: 0,
     });
 
-    return NextResponse.json({ ok: true, order, validation });
+    let paymentReference = '';
+    let proofUploadResult: unknown = null;
+    let warning: string | undefined;
+
+    if (parsed.form.paiement === 'mobile_money') {
+      paymentReference = buildMobileMoneyReference(Number(order.id));
+      const payerNumber = parsed.form.mobileMoneyPayerNumber?.trim() || '';
+
+      await updateOrderMeta(Number(order.id), [
+        { key: 'saeg_mobile_money_reference', value: paymentReference },
+        { key: 'saeg_mobile_money_payer_number', value: payerNumber },
+        { key: 'saeg_mobile_money_status', value: 'pending_verification' },
+      ]);
+
+      await createInternalOrderNote(
+        Number(order.id),
+        `${mobileMoneyNote(paymentReference)} Numéro payeur: ${payerNumber || 'N/A'}`,
+      );
+
+      if (parsed.paymentProof) {
+        try {
+          proofUploadResult = await uploadPaymentProof(Number(order.id), paymentReference, payerNumber, parsed.paymentProof);
+        } catch (proofError) {
+          warning = 'Commande créée, mais la preuve n’a pas pu être liée automatiquement.';
+          await createInternalOrderNote(Number(order.id), `Échec liaison preuve Mobile Money: ${String(proofError)}`);
+        }
+      }
+    }
+
+    return NextResponse.json({
+      ok: true,
+      order,
+      paymentReference,
+      paymentProof: proofUploadResult,
+      warning,
+      validation,
+    });
   } catch (error) {
     console.error('[SAEG] create-order failed', error);
     return NextResponse.json({ error: 'Impossible de créer la commande', details: String(error) }, { status: 502 });

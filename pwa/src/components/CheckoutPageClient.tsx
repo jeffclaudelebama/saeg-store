@@ -15,6 +15,8 @@ export function CheckoutPageClient() {
   const { items, subtotal, clearCart, hydrated } = useCart();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [mobileMoneySeed] = useState(() => Math.random().toString(36).slice(-4).toUpperCase());
 
   const [form, setForm] = useState<SaegCheckoutForm>({
     nom: '',
@@ -25,6 +27,7 @@ export function CheckoutPageClient() {
     creneau: 'matin',
     paiement: 'cash',
     note: '',
+    mobileMoneyPayerNumber: '',
   });
 
   useEffect(() => {
@@ -37,8 +40,15 @@ export function CheckoutPageClient() {
   const total = subtotal + shipping;
 
   const canSubmit = useMemo(() => {
-    return items.length > 0 && form.nom.trim() && form.telephone.trim() && form.adresse.trim();
-  }, [items.length, form]);
+    const hasMainFields = items.length > 0 && form.nom.trim() && form.telephone.trim() && form.adresse.trim();
+    if (!hasMainFields) {
+      return false;
+    }
+    if (form.paiement !== 'mobile_money') {
+      return true;
+    }
+    return Boolean(form.mobileMoneyPayerNumber?.trim()) && Boolean(paymentProofFile);
+  }, [items.length, form, paymentProofFile]);
 
   async function submitOrder() {
     setError(null);
@@ -49,10 +59,16 @@ export function CheckoutPageClient() {
 
     startTransition(async () => {
       try {
+        const payload = new FormData();
+        payload.append('items', JSON.stringify(items));
+        payload.append('form', JSON.stringify(form));
+        if (paymentProofFile) {
+          payload.append('payment_proof', paymentProofFile);
+        }
+
         const res = await fetch('/api/checkout/create-order', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items, form }),
+          body: payload,
         });
         const data = await res.json();
 
@@ -63,7 +79,7 @@ export function CheckoutPageClient() {
         const order = data.order;
         clearCart();
         router.push(
-          `/confirmation?orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(form.paiement)}`
+          `/confirmation?orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(form.paiement)}&paymentRef=${encodeURIComponent(String(data.paymentReference || ''))}`
         );
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erreur de confirmation');
@@ -178,8 +194,35 @@ export function CheckoutPageClient() {
               {form.paiement === 'mobile_money' ? (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <p className="text-sm font-bold text-primary">Paiement Mobile Money</p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary/80">
+                    Référence: SAEG-{'{orderId}'}-{mobileMoneySeed}
+                  </p>
                   <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : SAEG</p>
                   <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : SAEG (bientôt disponible)</p>
+                  <p className="mt-3 text-xs text-slate-600">Effectuez le paiement, puis ajoutez la preuve.</p>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="space-y-2">
+                      <span className="text-sm font-semibold text-slate-700">Numéro Airtel/Moov du payeur *</span>
+                      <input
+                        className="w-full rounded border-slate-200"
+                        value={form.mobileMoneyPayerNumber || ''}
+                        onChange={(e) => setForm({ ...form, mobileMoneyPayerNumber: e.target.value })}
+                        placeholder="Ex: 077 00 00 00"
+                      />
+                    </label>
+                    <label className="space-y-2">
+                      <span className="text-sm font-semibold text-slate-700">Preuve de paiement (image/pdf) *</span>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(e) => setPaymentProofFile(e.target.files?.[0] ?? null)}
+                        className="w-full rounded border-slate-200 bg-white text-sm file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-xs file:font-bold file:text-primary"
+                      />
+                      {paymentProofFile ? (
+                        <p className="text-xs text-slate-500">Fichier: {paymentProofFile.name}</p>
+                      ) : null}
+                    </label>
+                  </div>
                 </div>
               ) : null}
             </div>
