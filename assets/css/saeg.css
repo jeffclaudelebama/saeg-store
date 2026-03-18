@@ -1,0 +1,27 @@
+/*
+ * AGROPAG Utility Styles
+ */
+
+:root {
+  --agropag-earth: #8B5E3C;
+  --agropag-earth-dark: #6B4429;
+}
+
+.btn-earth {
+  background: var(--agropag-earth);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.btn-earth:hover {
+  background: var(--agropag-earth-dark);
+}
+
+.badge-terroir {
+  background: var(--agropag-earth);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+}

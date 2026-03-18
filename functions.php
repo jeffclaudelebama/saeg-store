@@ -1,8 +1,8 @@
 <?php
 /**
- * SAEG La Boutique Theme Functions
+ * AGROPAG La Boutique Theme Functions
  * 
- * @package SAEG_La_Boutique
+ * @package AGROPAG_La_Boutique
  * @since 1.0.0
  */
 
@@ -70,24 +70,53 @@ function saeg_theme_setup() {
             'color' => '#00571a',
         ),
         array(
-            'name'  => __( 'Primary Light', 'saeg-la-boutique' ),
-            'slug'  => 'primary-light',
-            'color' => '#03BC42',
-        ),
-        array(
             'name'  => __( 'Accent', 'saeg-la-boutique' ),
             'slug'  => 'accent',
             'color' => '#FED202',
         ),
         array(
-            'name'  => __( 'White', 'saeg-la-boutique' ),
-            'slug'  => 'white',
-            'color' => '#ffffff',
+            'name'  => __( 'Neutral 50', 'saeg-la-boutique' ),
+            'slug'  => 'neutral-50',
+            'color' => '#f9fafb',
         ),
         array(
-            'name'  => __( 'Neutral 800', 'saeg-la-boutique' ),
-            'slug'  => 'neutral-800',
-            'color' => '#1f2937',
+            'name'  => __( 'Neutral 100', 'saeg-la-boutique' ),
+            'slug'  => 'neutral-100',
+            'color' => '#f3f4f6',
+        ),
+        array(
+            'name'  => __( 'Neutral 200', 'saeg-la-boutique' ),
+            'slug'  => 'neutral-200',
+            'color' => '#e5e7eb',
+        ),
+        array(
+            'name'  => __( 'Neutral 300', 'saeg-la-boutique' ),
+            'slug'  => 'neutral-300',
+            'color' => '#d1d5db',
+        ),
+    ) );
+    
+    // Add custom font sizes
+    add_theme_support( 'editor-font-sizes', array(
+        array(
+            'name' => __( 'Small', 'saeg-la-boutique' ),
+            'size' => 14,
+            'slug' => 'small'
+        ),
+        array(
+            'name' => __( 'Medium', 'saeg-la-boutique' ),
+            'size' => 16,
+            'slug' => 'medium'
+        ),
+        array(
+            'name' => __( 'Large', 'saeg-la-boutique' ),
+            'size' => 18,
+            'slug' => 'large'
+        ),
+        array(
+            'name' => __( 'Extra Large', 'saeg-la-boutique' ),
+            'size' => 24,
+            'slug' => 'extra-large'
         ),
     ) );
     
@@ -127,6 +156,14 @@ function saeg_enqueue_frontend_assets() {
         'saeg-app-style',
         SAEG_THEME_URI . '/assets/css/app.css',
         array( 'saeg-wp-neutralize' ), // Depends on wp-neutralize to be loaded first
+        SAEG_THEME_VERSION
+    );
+    
+    // Add custom AGROPAG utility styles (earth tone accents)
+    wp_enqueue_style(
+        'saeg-earth-style',
+        SAEG_THEME_URI . '/assets/css/saeg.css',
+        array( 'saeg-app-style' ),
         SAEG_THEME_VERSION
     );
     
@@ -221,7 +258,7 @@ function saeg_register_block_patterns() {
     foreach ( $pattern_files as $file ) {
         register_block_pattern_category(
             'saeg',
-            array( 'label' => __( 'SAEG Patterns', 'saeg-la-boutique' ) )
+            array( 'label' => __( 'AGROPAG Patterns', 'saeg-la-boutique' ) )
         );
     }
 }
@@ -357,7 +394,7 @@ function saeg_admin_notice() {
         ?>
         <div class="notice notice-info is-dismissible">
             <p>
-                <strong><?php _e( 'SAEG La Boutique Theme', 'saeg-la-boutique' ); ?></strong><br>
+                <strong><?php _e( 'AGROPAG La Boutique Theme', 'saeg-la-boutique' ); ?></strong><br>
                 <?php _e( 'Welcome! To get started, make sure WooCommerce is activated and complete the theme setup.', 'saeg-la-boutique' ); ?>
             </p>
         </div>
@@ -374,5 +411,6 @@ add_action( 'admin_notices', 'saeg_admin_notice' );
  */
 require_once SAEG_THEME_DIR . '/inc/custom-functions.php';
 require_once SAEG_THEME_DIR . '/inc/woocommerce-hooks.php';
+require_once SAEG_THEME_DIR . '/inc/class-walker-nav-menu.php';
 
 ?>

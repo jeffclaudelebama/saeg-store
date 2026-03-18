@@ -2,7 +2,7 @@
 /**
  * WooCommerce theme hooks and customizations
  * 
- * @package SAEG_La_Boutique
+ * @package AGROPAG_La_Boutique
  * @since 1.0.0
  */
 

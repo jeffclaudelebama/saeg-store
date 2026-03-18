@@ -1,24 +1,202 @@
 /*
-Theme Name: SAEG La Boutique
-Theme URI: https://github.com/yourusername/saeg-la-boutique
-Author: Your Name
-Author URI: https://example.com
-Description: WordPress Block Theme for SAEG | La Boutique - e-commerce site with WooCommerce support
+Theme Name: AGROPAG La Boutique
+Theme URI: https://store.saeggabon.ga
+Description: Thème WordPress spécialisé pour AGROPAG, la marketplace des invendus du Gabon
+Author: AGROPAG
+Author URI: https://store.saeggabon.ga
 Version: 1.0.0
-License: GPL v3 or later
-License URI: https://www.gnu.org/licenses/gpl-3.0.html
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: saeg-la-boutique
-Domain Path: /languages
-Requires at least: 6.2
-Requires PHP: 7.4
-Template Tags: e-commerce, woocommerce, blog, responsive-layout
+Tags: e-commerce, woocommerce, responsive-layout, custom-menu, featured-images, theme-options
+
+This theme, like WordPress, is licensed under the GPL.
+Use it to make something cool, have fun, and share what you've learned.
 */
 
-/* 
-==============================================
-SAEG La Boutique - Root Styles
-==============================================
-*/
+/* ====== THEME STYLES ====== */
+/* Main styles will be loaded from app.css */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #1e293b;
+    background-color: #ffffff;
+}
+
+/* ====== WOOCOMMERCE STYLES ====== */
+.woocommerce .woocommerce-message,
+.woocommerce .woocommerce-info,
+.woocommerce .woocommerce-error {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+}
+
+.woocommerce .woocommerce-message {
+    border-color: #00571a;
+    background-color: #f0fdf4;
+    color: #00571a;
+}
+
+.woocommerce .woocommerce-error {
+    border-color: #dc2626;
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.woocommerce .woocommerce-info {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+    color: #2563eb;
+}
+
+.woocommerce .button {
+    background-color: #00571a;
+    color: #ffffff;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.woocommerce .button:hover {
+    background-color: #004d16;
+    transform: translateY(-1px);
+}
+
+.woocommerce .button.alt {
+    background-color: #64748b;
+}
+
+.woocommerce .button.alt:hover {
+    background-color: #475569;
+}
+
+/* Product grid */
+.woocommerce ul.products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.woocommerce ul.products li.product {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.woocommerce ul.products li.product:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.woocommerce ul.products li.product img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin: 1rem 0 0.5rem;
+    line-height: 1.4;
+}
+
+.woocommerce ul.products li.product .price {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #00571a;
+    margin: 0.5rem 0;
+}
+
+.woocommerce ul.products li.product .button {
+    width: 100%;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+/* Cart styles */
+.woocommerce table.shop_table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2rem;
+}
+
+.woocommerce table.shop_table th,
+.woocommerce table.shop_table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.woocommerce table.shop_table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* Checkout styles */
+.woocommerce .woocommerce-billing-fields,
+.woocommerce .woocommerce-shipping-fields {
+    margin-bottom: 2rem;
+}
+
+.woocommerce .form-row {
+    margin-bottom: 1rem;
+}
+
+.woocommerce .form-row label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.woocommerce .form-row input,
+.woocommerce .form-row select,
+.woocommerce .form-row textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+
+.woocommerce .form-row input:focus,
+.woocommerce .form-row select:focus,
+.woocommerce .form-row textarea:focus {
+    outline: none;
+    border-color: #00571a;
+    box-shadow: 0 0 0 3px rgba(0, 87, 26, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .woocommerce ul.products {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .woocommerce table.shop_table {
+        font-size: 0.875rem;
+    }
+    
+    .woocommerce table.shop_table th,
+    .woocommerce table.shop_table td {
+        padding: 0.5rem;
+    }
+}
 
 :root {
   /* Colors */
@@ -246,7 +424,7 @@ select:focus {
 }
 
 .woocommerce-product__title {
-  fonf-size: 1rem;
+  font-size: 1rem;
   font-weight: 600;
   margin: var(--spacing-md) 0;
 }

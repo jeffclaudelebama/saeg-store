@@ -1,5 +1,3 @@
-<!-- wp:template {"slug":"archive","templateName":"Archive"} -->
-
 <!-- wp:template-part {"slug":"header"} /-->
 
 <!-- wp:group {"align":"full","layout":{"type":"constrained"},"className":"archive-wrapper"} -->
@@ -8,173 +6,87 @@
     <!-- Archive Header -->
     <!-- wp:group {"align":"full","backgroundColor":"primary","layout":{"inherit":true},"className":"archive-header"} -->
     <header class="wp-block-group alignfull archive-header">
-        <!-- wp:heading {"level":1,"fontSize":"4xl"} -->
-        <h1 class="wp-block-heading" style="color: #ffffff; font-size: 2.5rem; margin: 0;">
-            <?php the_archive_title(); ?>
+        <!-- wp:heading {"level":1,"fontSize":"4xl","className":"archive-title"} -->
+        <h1 class="wp-block-heading archive-title has-primary-color has-text-color">
+            <!-- wp:archive-title /-->
         </h1>
         <!-- /wp:heading -->
         
-        <!-- wp:html -->
-        <?php the_archive_description( '<p style="color: rgba(255, 255, 255, 0.9); margin-top: 1rem;">', '</p>' ); ?>
-        <!-- /wp:html -->
+        <!-- Archive Description -->
+        <!-- wp:group {"className":"archive-description"} -->
+        <div class="wp-block-group archive-description">
+            <!-- wp:archive-description /-->
+        </div>
+        <!-- /wp:group -->
+        
+        <!-- Breadcrumbs -->
+        <!-- wp:group {"className":"breadcrumbs"} -->
+        <nav class="wp-block-group breadcrumbs">
+            <a href="/">Accueil</a>
+            <span class="separator">/</span>
+            <!-- wp:archive-title /-->
+        </nav>
+        <!-- /wp:group -->
     </header>
     <!-- /wp:group -->
     
-    <!-- Posts Grid -->
-    <!-- wp:html -->
-    <div class="archive-posts" style="padding: var(--spacing-3xl) var(--spacing-xl); display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-2xl);">
-        <?php
-        if ( have_posts() ) {
-            while ( have_posts() ) {
-                the_post();
-                ?>
-                <article class="post-card-grid">
-                    <?php if ( has_post_thumbnail() ) { ?>
-                        <div class="post-image">
-                            <a href="<?php the_permalink(); ?>">
-                                <?php
-                                the_post_thumbnail( 'saeg-featured', array(
-                                    'alt' => get_the_title(),
-                                ) );
-                                ?>
-                            </a>
-                        </div>
-                    <?php } ?>
-                    
-                    <div class="post-card-content">
-                        <h3 class="post-card-title">
-                            <a href="<?php the_permalink(); ?>">
-                                <?php the_title(); ?>
-                            </a>
-                        </h3>
-                        
-                        <div class="post-card-meta">
-                            <time datetime="<?php echo esc_attr( get_the_date( 'c' ) ); ?>">
-                                <?php echo esc_html( get_the_date() ); ?>
-                            </time>
-                        </div>
-                        
-                        <p class="post-card-excerpt">
-                            <?php
-                            if ( has_excerpt() ) {
-                                the_excerpt();
-                            } else {
-                                echo wp_trim_words( get_the_content(), 20 );
-                            }
-                            ?>
-                        </p>
-                        
-                        <a href="<?php the_permalink(); ?>" class="read-more">
-                            <?php _e( 'Read More →', 'saeg-la-boutique' ); ?>
-                        </a>
-                    </div>
-                </article>
-                <?php
-            }
+    <!-- Archive Content -->
+    <!-- wp:group {"layout":{"type":"flex"},"align":"full"} -->
+    <div class="wp-block-group alignfull archive-container">
+        
+        <!-- Archive Main Content -->
+        <!-- wp:group {"className":"archive-main"} -->
+        <section class="wp-block-group archive-main">
             
-            // Pagination
-            the_posts_pagination( array(
-                'mid_size' => 2,
-                'prev_text' => __( '← Previous', 'saeg-la-boutique' ),
-                'next_text' => __( 'Next →', 'saeg-la-boutique' ),
-            ) );
-        } else {
-            echo '<p style="grid-column: 1/-1; text-align: center;">' . __( 'No posts found in this archive.', 'saeg-la-boutique' ) . '</p>';
-        }
-        ?>
+            <!-- Query Loop for Archive -->
+            <!-- wp:query {"queryId":2,"query":{"perPage":12,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":true}} -->
+            <div class="wp-block-query">
+                
+                <!-- wp:post-template {"layout":{"type":"grid","columnCount":3},"className":"archive-grid"} -->
+                    <!-- wp:group {"className":"archive-post-card"} -->
+                    <article class="wp-block-group archive-post-card">
+                        <!-- wp:post-featured-image {"isLink":true,"size":"saeg-featured","className":"post-image"} /-->
+                        
+                        <!-- wp:group {"className":"post-content"} -->
+                        <div class="wp-block-group post-content">
+                            <!-- wp:post-title {"isLink":true,"className":"post-title"} /-->
+                            
+                            <!-- wp:post-excerpt {"className":"post-excerpt"} /-->
+                            
+                            <!-- wp:post-date {"className":"post-date"} /-->
+                            
+                            <!-- wp:post-terms {"term":"category","className":"post-categories"} /-->
+                        </div>
+                        <!-- /wp:group -->
+                    </article>
+                    <!-- /wp:group -->
+                <!-- /wp:post-template -->
+                
+                <!-- wp:query-pagination {"paginationArrow":"arrow","align":"center","className":"pagination"} -->
+                    <!-- wp:query-pagination-previous {"fontSize":"small"} /-->
+                    <!-- wp:query-pagination-numbers /-->
+                    <!-- wp:query-pagination-next {"fontSize":"small"} /-->
+                <!-- /wp:query-pagination -->
+                
+            </div>
+            <!-- /wp:query -->
+            
+        </section>
+        <!-- /wp:group -->
+        
+        <!-- Archive Sidebar -->
+        <!-- wp:group {"className":"archive-sidebar"} -->
+        <aside class="wp-block-group archive-sidebar">
+            <!-- wp:widget-area {"id":"primary-sidebar","className":"sidebar-widgets"} -->
+                <!-- Widgets will be displayed here -->
+            <!-- /wp:widget-area -->
+        </aside>
+        <!-- /wp:group -->
+        
     </div>
-    <!-- /wp:html -->
+    <!-- /wp:group -->
     
 </main>
+<!-- /wp:group -->
 
 <!-- wp:template-part {"slug":"footer"} /-->
-
-<!-- Styles -->
-<style>
-.archive-header {
-    background: linear-gradient(135deg, var(--color-primary) 0%, #006926 100%);
-    color: var(--color-white);
-    padding: var(--spacing-3xl) var(--spacing-xl);
-    margin-bottom: var(--spacing-3xl);
-}
-
-.post-card-grid {
-    background-color: var(--color-white);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-}
-
-.post-card-grid:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
-}
-
-.post-image {
-    width: 100%;
-    height: 200px;
-    overflow: hidden;
-}
-
-.post-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.post-card-grid:hover .post-image img {
-    transform: scale(1.05);
-}
-
-.post-card-content {
-    padding: var(--spacing-lg);
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-}
-
-.post-card-title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0 0 var(--spacing-sm) 0;
-}
-
-.post-card-title a {
-    color: var(--color-neutral-900);
-}
-
-.post-card-title a:hover {
-    color: var(--color-primary);
-}
-
-.post-card-meta {
-    font-size: 0.875rem;
-    color: var(--color-neutral-600);
-    margin-bottom: var(--spacing-md);
-}
-
-.post-card-excerpt {
-    color: var(--color-neutral-700);
-    font-size: 0.875rem;
-    margin-bottom: var(--spacing-lg);
-    flex-grow: 1;
-}
-
-.read-more {
-    color: var(--color-primary);
-    font-weight: 600;
-    display: inline-block;
-    align-self: flex-start;
-}
-
-@media (max-width: 768px) {
-    .archive-posts {
-        grid-template-columns: 1fr !important;
-    }
-}
-</style>
-<!-- /wp:template -->

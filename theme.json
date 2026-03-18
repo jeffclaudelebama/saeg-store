@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.wp.org/wp/6.2/theme.json",
   "version": 2,
-  "title": "SAEG | La Boutique",
+  "title": "AGROPAG La Boutique",
   "settings": {
     "appearanceTools": true,
     "color": {
@@ -10,6 +10,16 @@
           "color": "#00571a",
           "name": "Primary",
           "slug": "primary"
+        },
+        {
+          "color": "#8B5E3C",
+          "name": "Earth",
+          "slug": "earth"
+        },
+        {
+          "color": "#6B4429",
+          "name": "Earth Dark",
+          "slug": "earth-dark"
         },
         {
           "color": "#f5f8f6",
