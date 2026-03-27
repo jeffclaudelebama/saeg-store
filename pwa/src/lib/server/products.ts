@@ -97,7 +97,7 @@ export async function getProductsServerResult(params?: ProductQuery): Promise<Pr
     };
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getProductsServer error:', error);
+      console.error('[AGROPAG] getProductsServer error:', error);
     }
     return {
       items: [],
@@ -127,7 +127,7 @@ export async function getProductServer(identifier: number | string, options?: { 
       return normalizeProduct(mapWooProduct(product));
     } catch (error) {
       if (!(error instanceof WooUnavailableError)) {
-        console.error('[SAEG] getProductServer error:', error);
+        console.error('[AGROPAG] getProductServer error:', error);
       }
       return null;
     }
@@ -147,7 +147,7 @@ export async function getProductServer(identifier: number | string, options?: { 
     return normalizeProduct(mapWooProduct(product));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getProductServer by slug error:', error);
+      console.error('[AGROPAG] getProductServer by slug error:', error);
     }
     return null;
   }
@@ -188,7 +188,7 @@ export async function getCategoriesServer(options?: { noCache?: boolean }): Prom
     return dedupeCategories(categories).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
-      console.error('[SAEG] getCategoriesServer error:', error);
+      console.error('[AGROPAG] getCategoriesServer error:', error);
     }
     return [];
   }
@@ -334,7 +334,7 @@ function mapWooProduct(product: WooProduct): SaegProduct {
     low_stock: Boolean(lowStock),
     stock_status: stockStatus,
     is_daily_surplus: Boolean(isDailySurplus),
-    origin: normalizeText(resolveValue(saegMap, metaMap, ['origin', 'saeg_origin'])) || 'SAEG',
+    origin: normalizeText(resolveValue(saegMap, metaMap, ['origin', 'saeg_origin'])) || 'AGROPAG',
     updated_at: normalizeText(product.date_modified_gmt ?? product.date_modified ?? '') || null,
   };
 }

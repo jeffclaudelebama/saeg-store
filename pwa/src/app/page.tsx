@@ -13,7 +13,7 @@ export default async function HomePage() {
   const featured = (offers.length ? offers : products).slice(0, 6);
 
   return (
-    <MarketingScaffold whatsappMessage="Bonjour SAEG, je souhaite commander via WhatsApp.">
+    <MarketingScaffold whatsappMessage="Bonjour AGROPAG, je souhaite commander via WhatsApp.">
       <main>
         <section className="relative bg-slate-50 overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 md:px-10 md:py-24 flex flex-col md:flex-row items-center gap-12 py-8">
@@ -25,7 +25,7 @@ export default async function HomePage() {
                 Produits frais du <span className="text-primary">marché éphémère</span>
               </h1>
               <p className="text-slate-600 md:text-xl max-w-xl leading-relaxed text-base">
-                Vente au kilo, livraison locale Libreville / Akanda / Owendo et Click & Collect. Stocks limités des invendus SAEG valorisés chaque jour.
+                Vente au kilo, livraison locale Libreville / Akanda / Owendo / Ntoum et Click & Collect. Stocks limités AGROPAG valorisés chaque jour.
               </p>
               <div className="flex flex-wrap gap-4 sm:flex-nowrap">
                 <Link className="w-full sm:w-auto px-6 py-4 bg-primary text-white font-bold rounded hover:bg-primary/90 transition-all flex items-center justify-center gap-2" href="/catalogue">
@@ -41,7 +41,7 @@ export default async function HomePage() {
               <div className="absolute inset-0 bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-100 flex items-center justify-center">
                 <div className="p-10 text-center">
                   <span className="material-symbols-outlined text-[96px] text-primary/30">grocery</span>
-                  <p className="text-sm font-semibold text-slate-500">Invendus du jour • SAEG</p>
+                  <p className="text-sm font-semibold text-slate-500">les stocks disponibles • AGROPAG</p>
                 </div>
               </div>
             </div>

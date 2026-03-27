@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
 import { PurchaseTracker } from '@/components/EventTrackers';
 import { formatCurrency } from '@/lib/format';
-import { SAEG_EMAIL, SAEG_PHONE, SAEG_WHATSAPP_INTL } from '@/lib/constants';
+import { AGROPAG_EMAIL, AGROPAG_PHONE, AGROPAG_WHATSAPP_INTL } from '@/lib/constants';
 
 export default function ConfirmationPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const orderNumber = typeof searchParams?.orderNumber === 'string' ? searchParams.orderNumber : '';
@@ -10,10 +10,10 @@ export default function ConfirmationPage({ searchParams }: { searchParams?: Reco
   const payment = typeof searchParams?.payment === 'string' ? searchParams.payment : 'cash';
   const paymentRef = typeof searchParams?.paymentRef === 'string' ? searchParams.paymentRef : '';
   const isMobileMoney = payment === 'mobile_money';
-  const whatsappLink = `https://wa.me/${SAEG_WHATSAPP_INTL}?text=${encodeURIComponent(`Bonjour SAEG, je confirme la commande #${orderNumber || '...'}.`)}`;
+  const whatsappLink = `https://wa.me/${AGROPAG_WHATSAPP_INTL}?text=${encodeURIComponent(`Bonjour AGROPAG, je confirme la commande #${orderNumber || '...'}.`)}`;
 
   return (
-    <MarketingScaffold whatsappMessage={`Bonjour SAEG, je viens de passer la commande #${orderNumber || '...'}.`}>
+    <MarketingScaffold whatsappMessage={`Bonjour AGROPAG, je viens de passer la commande #${orderNumber || '...'}.`}>
       <PurchaseTracker orderNumber={orderNumber} total={total} />
       <main className="min-h-[60vh] max-w-3xl mx-auto px-4 py-12">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
@@ -41,17 +41,17 @@ export default function ConfirmationPage({ searchParams }: { searchParams?: Reco
                   Référence: {paymentRef}
                 </p>
               ) : null}
-              <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : SAEG</p>
-              <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : SAEG (bientôt disponible)</p>
+              <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : AGROPAG</p>
+              <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : AGROPAG (bientôt disponible)</p>
               <p className="mt-3 text-xs text-slate-600">
-                Après validation de la commande, merci d&apos;effectuer le paiement Airtel Money avec le code agent SAEG puis d&apos;ajouter la preuve si ce n&apos;est pas déjà fait.
+                Après validation de la commande, merci d&apos;effectuer le paiement Airtel Money avec le code agent AGROPAG puis d&apos;ajouter la preuve si ce n&apos;est pas déjà fait.
               </p>
             </div>
           ) : null}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <a href={`tel:${SAEG_PHONE}`} className="btn btn-ghost">Appeler SAEG</a>
-            <a href={whatsappLink} target="_blank" rel="noreferrer" className="btn btn-ghost">WhatsApp SAEG</a>
-            <a href={`mailto:${SAEG_EMAIL}`} className="btn btn-ghost">Email SAEG</a>
+            <a href={`tel:${AGROPAG_PHONE}`} className="btn btn-ghost">Appeler AGROPAG</a>
+            <a href={whatsappLink} target="_blank" rel="noreferrer" className="btn btn-ghost">WhatsApp AGROPAG</a>
+            <a href={`mailto:${AGROPAG_EMAIL}`} className="btn btn-ghost">Email AGROPAG</a>
           </div>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/suivi" className="btn btn-primary">Suivre ma commande</Link>

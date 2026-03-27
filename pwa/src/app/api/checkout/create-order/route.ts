@@ -92,7 +92,7 @@ async function createWooOrderRaw(payload: Record<string, unknown>) {
   const token = Buffer.from(`${env.wcKey}:${env.wcSecret}`).toString('base64');
   const endpoint = `${baseUrl}/wp-json/wc/v3/orders`;
 
-  console.info('[SAEG][checkout] create-order payload', JSON.stringify(payload));
+  console.info('[AGROPAG][checkout] create-order payload', JSON.stringify(payload));
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -105,7 +105,7 @@ async function createWooOrderRaw(payload: Record<string, unknown>) {
   });
 
   const bodyText = await response.text();
-  console.info('[SAEG][checkout] create-order response', JSON.stringify({ status: response.status, body: bodyText }));
+  console.info('[AGROPAG][checkout] create-order response', JSON.stringify({ status: response.status, body: bodyText }));
 
   if (!response.ok) {
     throw new WooOrderError(response.status, bodyText);
@@ -123,7 +123,7 @@ function random4(): string {
 }
 
 function buildMobileMoneyReference(orderId: number): string {
-  return `SAEG-${orderId}-${random4()}`;
+  return `AGROPAG-${orderId}-${random4()}`;
 }
 
 function toStringValue(value: FormDataEntryValue | null): string {
@@ -176,7 +176,7 @@ function isAllowedProofFile(file: File): boolean {
 }
 
 function mobileMoneyNote(reference: string): string {
-  return `Référence Mobile Money: ${reference} | Airtel Money — Code agent : SAEG | Moov Money — Code agent : SAEG (bientôt disponible).`;
+  return `Référence Mobile Money: ${reference} | Airtel Money — Code agent : AGROPAG | Moov Money — Code agent : AGROPAG (bientôt disponible).`;
 }
 
 async function createInternalOrderNote(orderId: number, note: string) {
@@ -307,7 +307,7 @@ export async function POST(request: Request) {
     { key: 'saeg_mode_livraison', value: form.modeLivraison },
     { key: 'saeg_creneau', value: form.creneau },
     { key: 'saeg_paiement', value: form.paiement },
-    { key: 'saeg_mobile_money_code_agent', value: 'SAEG' },
+    { key: 'saeg_mobile_money_code_agent', value: 'AGROPAG' },
     { key: 'saeg_mobile_money_payer_number', value: form.mobileMoneyPayerNumber || '' },
     { key: 'saeg_source', value: 'pwa' },
   ];
@@ -317,7 +317,7 @@ export async function POST(request: Request) {
     last_name: form.last_name || '',
     phone: normalizedBillingPhone,
     email: form.email || 'store@saeggabon.ga',
-    address_1: form.address_1 || (form.modeLivraison === 'pickup' ? 'Retrait marché SAEG' : ''),
+    address_1: form.address_1 || (form.modeLivraison === 'pickup' ? 'Retrait marché AGROPAG' : ''),
     address_2: form.address_2 || '',
     city: form.commune,
     country: 'GA',
@@ -329,7 +329,7 @@ export async function POST(request: Request) {
           first_name: billing.first_name,
           last_name: billing.last_name,
           phone: billing.phone,
-          address_1: 'Retrait Marché SAEG',
+          address_1: 'Retrait Marché AGROPAG',
           address_2: '',
           city: 'Libreville',
           country: 'GA',
@@ -430,7 +430,7 @@ export async function POST(request: Request) {
         { status: error.status },
       );
     }
-    console.error('[SAEG] create-order failed', error);
+    console.error('[AGROPAG] create-order failed', error);
     return NextResponse.json({ error: 'Impossible de créer la commande', details: String(error) }, { status: 502 });
   }
 }

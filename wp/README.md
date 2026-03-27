@@ -1,9 +1,9 @@
-# SAEG WordPress / WooCommerce (Backoffice Headless)
+# AGROPAG WordPress / WooCommerce (Backoffice Headless)
 
 ## Plugins recommandés (phase 1)
 
 - WooCommerce
-- SAEG Weight Products (fourni dans `plugins/saeg-weight-products`)
+- AGROPAG Weight Products (fourni dans `plugins/saeg-weight-products`)
 - WP Mail SMTP
 - Limit Login Attempts (ou équivalent)
 - Cache léger compatible headless (ex. Cache Enabler)
@@ -25,7 +25,7 @@
 
 ## Rôle “Superviseur”
 
-Le plugin SAEG crée un rôle `saeg_superviseur` pouvant :
+Le plugin AGROPAG crée un rôle `saeg_superviseur` pouvant :
 - voir commandes et statistiques WooCommerce
 - modifier produits (prix, stock, métadonnées de poids)
 - ne pas gérer plugins/réglages globaux

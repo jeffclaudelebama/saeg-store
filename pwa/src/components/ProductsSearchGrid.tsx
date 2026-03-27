@@ -90,7 +90,7 @@ export function ProductsSearchGrid({
         if (controller.signal.aborted) {
           return;
         }
-        console.error('[SAEG] search fetch failed', cause);
+        console.error('[AGROPAG] search fetch failed', cause);
         setError('Recherche indisponible momentanément.');
         setServerItems(null);
       } finally {

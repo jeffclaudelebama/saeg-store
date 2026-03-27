@@ -27,13 +27,13 @@ export function SiteHeader() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-20 items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-primary/10 text-primary">
-                <span className="material-symbols-outlined">eco</span>
-              </div>
-              <div>
-                <span className="block text-sm font-black leading-none text-primary">SAEG</span>
-                <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">La Boutique</span>
-              </div>
+              <img
+                src="/img/agropag-logo.png"
+                alt="AGROPAG logo"
+                className="h-10 sm:h-12 w-auto object-contain"
+                width={180}
+                height={48}
+              />
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">

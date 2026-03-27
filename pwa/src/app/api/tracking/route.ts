@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       statusLabel: 'Préparation',
       createdAt: new Date().toISOString(),
       customerPhone: phone,
-      customerName: 'Client SAEG',
+      customerName: 'Client AGROPAG',
       total: 12000,
       deliveryMode: 'delivery',
       commune: 'Libreville',
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('[SAEG] tracking failed', error);
+    console.error('[AGROPAG] tracking failed', error);
     return NextResponse.json({ found: false, message: 'Erreur de suivi.' }, { status: 502 });
   }
 }

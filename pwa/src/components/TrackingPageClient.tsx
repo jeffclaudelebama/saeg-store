@@ -61,7 +61,7 @@ export function TrackingPageClient() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Commande</p>
               <h3 className="text-2xl font-black text-slate-900">#{result.orderNumber}</h3>
-              <p className="text-sm text-slate-500">{result.customerName || 'Client SAEG'} • {result.customerPhone}</p>
+              <p className="text-sm text-slate-500">{result.customerName || 'Client AGROPAG'} • {result.customerPhone}</p>
               {result.createdAt ? <p className="text-xs text-slate-400 mt-1">Créée le {formatLibrevilleDate(result.createdAt)}</p> : null}
             </div>
             <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">

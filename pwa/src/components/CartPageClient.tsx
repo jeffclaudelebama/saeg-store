@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { KgSelector } from '@/components/KgSelector';
 import { EmptyState } from '@/components/UiStates';
-import { SAEG_WHATSAPP_INTL } from '@/lib/constants';
+import { AGROPAG_WHATSAPP_INTL } from '@/lib/constants';
 import { getDeliveryFee } from '@/lib/delivery';
 import { formatCurrency, formatQty } from '@/lib/format';
 import { useCart } from '@/providers/CartProvider';
@@ -21,7 +21,7 @@ export function CartPageClient() {
   const { items, subtotal, updateItemQuantity, removeItem, hydrated, hydrateWarnings, clearHydrateWarnings } = useCart();
   const [commune, setCommune] = useState<SaegCommune>('Libreville');
   const [modeLivraison, setModeLivraison] = useState<SaegDeliveryMode>('delivery');
-  const whatsappNumber = SAEG_WHATSAPP_INTL;
+  const whatsappNumber = AGROPAG_WHATSAPP_INTL;
   const invalidSet = useMemo(() => {
     const token = searchParams.get('invalid') || '';
     return new Set(token.split(',').map((item) => item.trim()).filter(Boolean));
@@ -33,7 +33,7 @@ export function CartPageClient() {
   const shareUrl = useMemo(() => {
     const lines = items.map((item) => `- ${item.name}: ${item.unitType === 'kg' ? `${quantityForItem(item).toFixed(2).replace('.', ',')} kg` : `${item.quantity} unité(s)`}`);
     const text = [
-      'Panier SAEG - La Boutique',
+      'Panier AGROPAG - La Boutique',
       ...lines,
       `Sous-total: ${Math.round(subtotal)} FCFA`,
       `Livraison (${modeLivraison === 'pickup' ? 'Click & Collect' : commune}): ${Math.round(shipping)} FCFA`,

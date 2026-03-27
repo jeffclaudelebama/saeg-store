@@ -13,7 +13,7 @@ export function PageShell({ title, subtitle, children, backHref }: { title: stri
                 ←
               </Link>
             ) : (
-              <div className="brand-pill">SAEG</div>
+              <div className="brand-pill">AGROPAG</div>
             )}
             <div className="brand-title-block">
               <p className="brand-overline">La Boutique</p>

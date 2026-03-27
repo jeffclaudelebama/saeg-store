@@ -17,7 +17,7 @@ export default function InstallerPage() {
           <p className="text-xs font-bold uppercase tracking-widest text-primary/70">iPhone / iPad (Safari)</p>
           <h2 className="mt-2 text-2xl font-black text-primary">Ajouter à l’écran d’accueil</h2>
           <ol className="mt-4 list-decimal pl-5 space-y-3 text-sm text-slate-600">
-            <li>Ouvrir SAEG La Boutique dans Safari</li>
+            <li>Ouvrir AGROPAG La Boutique dans Safari</li>
             <li>Appuyer sur <strong>Partager</strong></li>
             <li>Choisir <strong>Sur l’écran d’accueil</strong></li>
             <li>Valider avec <strong>Ajouter</strong></li>

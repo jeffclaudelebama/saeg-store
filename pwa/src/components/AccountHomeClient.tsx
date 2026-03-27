@@ -66,7 +66,7 @@ export function AccountHomeClient() {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <article className="rounded-xl border border-slate-200 bg-white p-6 md:p-8">
-          <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Compte SAEG</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Compte AGROPAG</p>
           <h2 className="mt-2 text-2xl font-black text-slate-900">Bienvenue</h2>
           <p className="mt-1 text-sm text-slate-600">
             Connecté avec le numéro <strong className="text-slate-900">{accountPhone}</strong>.

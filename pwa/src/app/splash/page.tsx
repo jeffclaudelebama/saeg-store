@@ -7,7 +7,7 @@ export default function SplashPage() {
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
           <span className="material-symbols-outlined text-5xl">eco</span>
         </div>
-        <p className="text-xs font-bold uppercase tracking-widest text-white/70">SAEG</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-white/70">AGROPAG</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight">La Boutique</h1>
         <p className="mt-3 text-sm text-white/80">Invendus du marché éphémère • Vente au kilo • Livraison locale</p>
         <div className="mt-8 grid gap-3">

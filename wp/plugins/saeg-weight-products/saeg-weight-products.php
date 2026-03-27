@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: SAEG Weight Products
- * Description: Gestion de produits vendus au kilo (quantités décimales), stock en kg, REST API headless SAEG et outils backoffice.
+ * Plugin Name: AGROPAG Weight Products
+ * Description: Gestion de produits vendus au kilo (quantités décimales), stock en kg, REST API headless AGROPAG et outils backoffice.
  * Version: 1.0.0
- * Author: SAEG
+ * Author: AGROPAG
  * Requires at least: 6.4
  * Requires PHP: 8.1
  * Text Domain: saeg-weight-products
@@ -13,8 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!class_exists('SAEG_Weight_Products')) {
-    final class SAEG_Weight_Products {
+if (!class_exists('AGROPAG_Weight_Products')) {
+    final class AGROPAG_Weight_Products {
         private const META_UNIT_TYPE = 'saeg_unit';
         private const META_PRICE_PER_KG = 'saeg_price_per_kg';
         private const META_STEP_KG = 'saeg_step_kg';
@@ -442,7 +442,7 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             woocommerce_wp_select([
                 'id' => self::META_UNIT_TYPE,
-                'label' => __('Type d\'unité SAEG', 'saeg-weight-products'),
+                'label' => __('Type d\'unité AGROPAG', 'saeg-weight-products'),
                 'description' => __('Choisir "kg" pour activer la vente au poids décimal.', 'saeg-weight-products'),
                 'desc_tip' => true,
                 'options' => [
@@ -485,7 +485,7 @@ if (!class_exists('SAEG_Weight_Products')) {
             woocommerce_wp_text_input([
                 'id' => self::META_ORIGIN,
                 'label' => __('Origine', 'saeg-weight-products'),
-                'description' => __('Ex: Marché SAEG, Producteurs locaux, Bouchers locaux.', 'saeg-weight-products'),
+                'description' => __('Ex: Marché AGROPAG, Producteurs locaux, Bouchers locaux.', 'saeg-weight-products'),
                 'desc_tip' => true,
                 'type' => 'text',
             ]);
@@ -787,11 +787,11 @@ if (!class_exists('SAEG_Weight_Products')) {
             foreach ($columns as $key => $label) {
                 $new_columns[$key] = $label;
                 if ($key === 'price') {
-                    $new_columns['saeg_stock_kg'] = __('Stock SAEG', 'saeg-weight-products');
+                    $new_columns['saeg_stock_kg'] = __('Stock AGROPAG', 'saeg-weight-products');
                 }
             }
             if (!isset($new_columns['saeg_stock_kg'])) {
-                $new_columns['saeg_stock_kg'] = __('Stock SAEG', 'saeg-weight-products');
+                $new_columns['saeg_stock_kg'] = __('Stock AGROPAG', 'saeg-weight-products');
             }
             return $new_columns;
         }
@@ -981,13 +981,13 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             if ($plain_text) {
                 echo "\n---\n";
-                echo "Contacts SAEG\n";
+                echo "Contacts AGROPAG\n";
                 echo 'Téléphone : ' . self::CONTACT_PHONE . "\n";
                 echo 'WhatsApp : ' . self::CONTACT_WHATSAPP . "\n";
                 echo 'Email : ' . self::CONTACT_EMAIL . "\n";
             } else {
                 echo '<div style="margin:18px 0;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">';
-                echo '<p style="margin:0 0 8px;font-weight:700;color:#0B2B16;">Contacts SAEG</p>';
+                echo '<p style="margin:0 0 8px;font-weight:700;color:#0B2B16;">Contacts AGROPAG</p>';
                 echo '<p style="margin:0;font-size:13px;line-height:1.5;">Téléphone : ' . esc_html(self::CONTACT_PHONE) . '<br />';
                 echo 'WhatsApp : ' . esc_html(self::CONTACT_WHATSAPP) . '<br />';
                 echo 'Email : ' . esc_html(self::CONTACT_EMAIL) . '</p>';
@@ -1004,8 +1004,8 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             if ($plain_text) {
                 echo "\nPaiement Mobile Money\n";
-                echo "Airtel Money — Code agent : SAEG\n";
-                echo "Moov Money — Code agent : SAEG (bientôt disponible)\n";
+                echo "Airtel Money — Code agent : AGROPAG\n";
+                echo "Moov Money — Code agent : AGROPAG (bientôt disponible)\n";
                 if ($reference !== '') {
                     echo 'Référence : ' . $reference . "\n";
                 }
@@ -1016,8 +1016,8 @@ if (!class_exists('SAEG_Weight_Products')) {
                 echo '<div style="margin:18px 0;padding:12px;border:1px solid #b7dfc6;background:#f3fbf6;border-radius:8px;">';
                 echo '<p style="margin:0 0 8px;font-weight:700;color:#1B7F3A;">Paiement Mobile Money</p>';
                 echo '<p style="margin:0;font-size:13px;line-height:1.6;color:#0f172a;">';
-                echo 'Airtel Money — Code agent : SAEG<br />';
-                echo 'Moov Money — Code agent : SAEG (bientôt disponible)';
+                echo 'Airtel Money — Code agent : AGROPAG<br />';
+                echo 'Moov Money — Code agent : AGROPAG (bientôt disponible)';
                 if ($reference !== '') {
                     echo '<br />Référence : <strong>' . esc_html($reference) . '</strong>';
                 }
@@ -1047,7 +1047,7 @@ if (!class_exists('SAEG_Weight_Products')) {
             $proof_url = $proof_id > 0 ? wp_get_attachment_url($proof_id) : '';
 
             echo '<div class="order_data_column" style="width:100%;">';
-            echo '<h3 style="margin-top:16px;">Paiement Mobile Money SAEG</h3>';
+            echo '<h3 style="margin-top:16px;">Paiement Mobile Money AGROPAG</h3>';
             echo '<p><strong>Référence :</strong> ' . esc_html($reference !== '' ? $reference : '—') . '</p>';
             echo '<p><strong>Numéro payeur :</strong> ' . esc_html($payer_number !== '' ? $payer_number : '—') . '</p>';
             echo '<p><strong>Statut :</strong> ' . esc_html($status !== '' ? $status : 'pending_verification') . '</p>';
@@ -1100,9 +1100,9 @@ if (!class_exists('SAEG_Weight_Products')) {
             $order->save();
 
             if ($order->get_status() === 'on-hold') {
-                $order->update_status('processing', 'Paiement Mobile Money validé manuellement par SAEG.');
+                $order->update_status('processing', 'Paiement Mobile Money validé manuellement par AGROPAG.');
             } else {
-                $order->add_order_note('Paiement Mobile Money validé manuellement par SAEG.', false);
+                $order->add_order_note('Paiement Mobile Money validé manuellement par AGROPAG.', false);
             }
 
             wp_safe_redirect($order->get_edit_order_url());
@@ -1368,8 +1368,8 @@ if (!class_exists('SAEG_Weight_Products')) {
         private static function register_whatsapp_lead_post_type(): void {
             register_post_type(self::WHATSAPP_LEAD_POST_TYPE, [
                 'labels' => [
-                    'name' => __('Leads WhatsApp SAEG', 'saeg-weight-products'),
-                    'singular_name' => __('Lead WhatsApp SAEG', 'saeg-weight-products'),
+                    'name' => __('Leads WhatsApp AGROPAG', 'saeg-weight-products'),
+                    'singular_name' => __('Lead WhatsApp AGROPAG', 'saeg-weight-products'),
                 ],
                 'public' => false,
                 'show_ui' => false,
@@ -1381,12 +1381,12 @@ if (!class_exists('SAEG_Weight_Products')) {
         }
 
         private static function get_whatsapp_leads_token(): string {
-            $token = getenv('SAEG_WA_LEADS_TOKEN');
+            $token = getenv('AGROPAG_WA_LEADS_TOKEN');
             if (is_string($token) && $token !== '') {
                 return $token;
             }
-            if (defined('SAEG_WA_LEADS_TOKEN')) {
-                $defined = (string) constant('SAEG_WA_LEADS_TOKEN');
+            if (defined('AGROPAG_WA_LEADS_TOKEN')) {
+                $defined = (string) constant('AGROPAG_WA_LEADS_TOKEN');
                 if ($defined !== '') {
                     return $defined;
                 }
@@ -1452,7 +1452,7 @@ if (!class_exists('SAEG_Weight_Products')) {
 
             $role = get_role('saeg_superviseur');
             if (!$role) {
-                add_role('saeg_superviseur', __('Superviseur SAEG', 'saeg-weight-products'), $caps);
+                add_role('saeg_superviseur', __('Superviseur AGROPAG', 'saeg-weight-products'), $caps);
                 return;
             }
 
@@ -1476,5 +1476,5 @@ if (!class_exists('SAEG_Weight_Products')) {
         }
     }
 
-    SAEG_Weight_Products::boot();
+    AGROPAG_Weight_Products::boot();
 }

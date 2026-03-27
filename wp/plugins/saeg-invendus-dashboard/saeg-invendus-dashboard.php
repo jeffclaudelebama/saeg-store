@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: SAEG Invendus Dashboard
- * Description: Backoffice SAEG dédié au suivi des invendus, stock faible et actions promo rapides.
+ * Plugin Name: AGROPAG Invendus Dashboard
+ * Description: Backoffice AGROPAG dédié au suivi des invendus, stock faible et actions promo rapides.
  * Version: 1.0.0
- * Author: SAEG
+ * Author: AGROPAG
  * Requires at least: 6.4
  * Requires PHP: 8.1
  * Text Domain: saeg-invendus-dashboard
@@ -13,8 +13,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!class_exists('SAEG_Invendus_Dashboard')) {
-    final class SAEG_Invendus_Dashboard {
+if (!class_exists('AGROPAG_Invendus_Dashboard')) {
+    final class AGROPAG_Invendus_Dashboard {
         private const MENU_SLUG = 'saeg-invendus';
         private const ACTION_APPLY_DISCOUNT = 'saeg_invendus_apply_discount';
         private const ACTION_TOGGLE_DAILY = 'saeg_invendus_toggle_daily';
@@ -33,8 +33,8 @@ if (!class_exists('SAEG_Invendus_Dashboard')) {
 
         public static function register_menu(): void {
             add_menu_page(
-                __('SAEG', 'saeg-invendus-dashboard'),
-                __('SAEG', 'saeg-invendus-dashboard'),
+                __('AGROPAG', 'saeg-invendus-dashboard'),
+                __('AGROPAG', 'saeg-invendus-dashboard'),
                 'edit_products',
                 self::MENU_SLUG,
                 [__CLASS__, 'render_page'],
@@ -76,10 +76,10 @@ if (!class_exists('SAEG_Invendus_Dashboard')) {
                     return false;
                 }
                 if ($filter === 'low') {
-                    return SAEG_Invendus_Dashboard::is_low_stock($product);
+                    return AGROPAG_Invendus_Dashboard::is_low_stock($product);
                 }
                 if ($filter === 'daily') {
-                    return SAEG_Invendus_Dashboard::is_daily_surplus($product);
+                    return AGROPAG_Invendus_Dashboard::is_daily_surplus($product);
                 }
                 return true;
             }));
@@ -97,7 +97,7 @@ if (!class_exists('SAEG_Invendus_Dashboard')) {
             $notice = isset($_GET['notice']) ? sanitize_key((string) wp_unslash($_GET['notice'])) : '';
 
             echo '<div class="wrap">';
-            echo '<h1>' . esc_html__('SAEG — Invendus', 'saeg-invendus-dashboard') . '</h1>';
+            echo '<h1>' . esc_html__('AGROPAG — Invendus', 'saeg-invendus-dashboard') . '</h1>';
             self::render_notice($notice);
 
             echo '<p style="margin-top:10px;">';
@@ -321,5 +321,5 @@ if (!class_exists('SAEG_Invendus_Dashboard')) {
         }
     }
 
-    SAEG_Invendus_Dashboard::boot();
+    AGROPAG_Invendus_Dashboard::boot();
 }

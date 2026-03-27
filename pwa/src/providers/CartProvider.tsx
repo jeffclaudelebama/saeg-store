@@ -12,12 +12,15 @@ type CartAction =
   | { type: 'update'; key: string; quantity: number }
   | { type: 'remove'; key: string }
   | { type: 'clear' }
-  | { type: 'clearWarnings' };
+  | { type: 'clearWarnings' }
+  | { type: 'openMiniCart' }
+  | { type: 'closeMiniCart' };
 
 interface CartState {
   items: SaegCartItem[];
   hydrated: boolean;
   hydrateWarnings: string[];
+  miniCartOpen: boolean;
 }
 
 interface CartContextValue extends CartState {
@@ -28,6 +31,8 @@ interface CartContextValue extends CartState {
   removeItem: (key: string) => void;
   clearCart: () => void;
   clearHydrateWarnings: () => void;
+  openMiniCart: () => void;
+  closeMiniCart: () => void;
 }
 
 const STORAGE_KEY = 'saeg_cart_v1';
@@ -223,13 +228,17 @@ function reducer(state: CartState, action: CartAction): CartState {
       return { ...state, items: [], hydrateWarnings: [] };
     case 'clearWarnings':
       return { ...state, hydrateWarnings: [] };
+    case 'openMiniCart':
+      return { ...state, miniCartOpen: true };
+    case 'closeMiniCart':
+      return { ...state, miniCartOpen: false };
     default:
       return state;
   }
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { items: [], hydrated: false, hydrateWarnings: [] });
+  const [state, dispatch] = useReducer(reducer, { items: [], hydrated: false, hydrateWarnings: [], miniCartOpen: false });
 
   useEffect(() => {
     try {
@@ -261,6 +270,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       subtotal,
       addItem(product, quantity) {
         dispatch({ type: 'add', product, quantity });
+        dispatch({ type: 'openMiniCart' });
         trackEvent('add_to_cart', {
           item_id: product.id,
           item_name: product.name,
@@ -280,6 +290,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       clearHydrateWarnings() {
         dispatch({ type: 'clearWarnings' });
+      },
+      openMiniCart() {
+        dispatch({ type: 'openMiniCart' });
+      },
+      closeMiniCart() {
+        dispatch({ type: 'closeMiniCart' });
       },
     };
   }, [state]);

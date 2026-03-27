@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'SAEG - La Boutique',
-    short_name: 'SAEG Boutique',
-    description: 'PWA SAEG pour la vente des invendus des marchés éphémères',
+    name: 'AGROPAG - La Boutique',
+    short_name: 'AGROPAG Boutique',
+    description: 'PWA AGROPAG pour la vente des invendus des marchés éphémères',
     start_url: '/',
     scope: '/',
     display: 'standalone',

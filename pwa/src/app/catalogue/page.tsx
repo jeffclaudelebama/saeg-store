@@ -23,7 +23,7 @@ export default async function CataloguePage({ searchParams }: { searchParams?: R
   };
 
   return (
-    <MarketingScaffold whatsappMessage="Bonjour SAEG, je consulte la boutique et j’ai besoin d’aide pour choisir mes produits.">
+    <MarketingScaffold whatsappMessage="Bonjour AGROPAG, je consulte la boutique et j’ai besoin d’aide pour choisir mes produits.">
       <main className="max-w-7xl mx-auto px-4 lg:px-20 py-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>

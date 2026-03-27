@@ -24,7 +24,7 @@ function normalizeGabonPhone(value: string): string | null {
 }
 
 export async function POST(request: Request) {
-  const token = process.env.SAEG_WA_LEADS_TOKEN;
+  const token = process.env.AGROPAG_WA_LEADS_TOKEN;
   if (!token) {
     return NextResponse.json({ error: 'Token leads WhatsApp non configuré' }, { status: 500 });
   }
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-SAEG-Token': token,
+      'X-AGROPAG-Token': token,
     },
     body: JSON.stringify({
       phone: normalizedPhone,

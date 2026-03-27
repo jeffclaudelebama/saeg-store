@@ -36,7 +36,7 @@ export function AccountLookupClient() {
   return (
     <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
       <h2 className="text-xl font-black text-primary">Espace Compte</h2>
-      <p className="mt-2 text-sm text-slate-600">Entrez votre numéro pour retrouver vos commandes SAEG.</p>
+      <p className="mt-2 text-sm text-slate-600">Entrez votre numéro pour retrouver vos commandes AGROPAG.</p>
       <form onSubmit={onSubmit} className="mt-5 space-y-4">
         <label className="block space-y-1">
           <span className="text-sm font-semibold text-slate-700">Téléphone</span>

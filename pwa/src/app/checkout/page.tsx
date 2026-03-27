@@ -3,7 +3,7 @@ import { MarketingScaffold } from '@/components/MarketingScaffold';
 
 export default function CheckoutPage() {
   return (
-    <MarketingScaffold whatsappMessage="Bonjour SAEG, j’ai une question sur mon checkout.">
+    <MarketingScaffold whatsappMessage="Bonjour AGROPAG, j’ai une question sur mon checkout.">
       <main className="max-w-7xl mx-auto px-4 pb-12 lg:pb-20">
         <nav className="max-w-7xl mx-auto px-4 py-4 md:py-6">
           <ol className="flex items-center w-full text-sm font-medium text-center text-slate-500 sm:text-base">

@@ -20,12 +20,12 @@ export const env = {
   siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'https://store.saeggabon.ga'),
   wpPublicUrl: getWpPublicUrl(),
   gaMeasurementId: getEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID', ''),
-  defaultCurrency: getEnv('SAEG_DEFAULT_CURRENCY', 'XAF'),
-  whatsappShareNumber: getEnv('SAEG_WHATSAPP_SHARE_NUMBER', '24177638864'),
-  orderStatusOnCreate: getEnv('SAEG_ORDER_STATUS_ON_CREATE', 'pending'),
-  wcBaseUrl: getFirstEnv(['SAEG_WC_BASE_URL', 'WP_BASE_URL', 'NEXT_PUBLIC_WP_URL', 'NEXT_PUBLIC_WP_PUBLIC_URL'], ''),
-  wcKey: getFirstEnv(['SAEG_WC_CONSUMER_KEY', 'WC_CONSUMER_KEY'], ''),
-  wcSecret: getFirstEnv(['SAEG_WC_CONSUMER_SECRET', 'WC_CONSUMER_SECRET'], ''),
+  defaultCurrency: getEnv('AGROPAG_DEFAULT_CURRENCY', 'XAF'),
+  whatsappShareNumber: getEnv('AGROPAG_WHATSAPP_SHARE_NUMBER', '24177638864'),
+  orderStatusOnCreate: getEnv('AGROPAG_ORDER_STATUS_ON_CREATE', 'pending'),
+  wcBaseUrl: getFirstEnv(['AGROPAG_WC_BASE_URL', 'WP_BASE_URL', 'NEXT_PUBLIC_WP_URL', 'NEXT_PUBLIC_WP_PUBLIC_URL'], ''),
+  wcKey: getFirstEnv(['AGROPAG_WC_CONSUMER_KEY', 'WC_CONSUMER_KEY'], ''),
+  wcSecret: getFirstEnv(['AGROPAG_WC_CONSUMER_SECRET', 'WC_CONSUMER_SECRET'], ''),
 };
 
 export function hasWooEnv(): boolean {

@@ -81,7 +81,7 @@ export const MOCK_PRODUCTS: SaegProduct[] = [
     low_stock: false,
     stock_status: 'instock',
     is_daily_surplus: true,
-    origin: 'Marché SAEG',
+    origin: 'Marché AGROPAG',
     ...base,
   },
   {

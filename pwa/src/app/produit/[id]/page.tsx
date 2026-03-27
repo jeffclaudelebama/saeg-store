@@ -15,7 +15,7 @@ export default async function ProductPage({ params }: { params: { id: string } }
     .slice(0, 4);
 
   return (
-    <MarketingScaffold whatsappMessage={`Bonjour SAEG, je veux commander ${product.name}.`}>
+    <MarketingScaffold whatsappMessage={`Bonjour AGROPAG, je veux commander ${product.name}.`}>
       <ViewItemTracker product={product} />
       <main className="max-w-7xl mx-auto px-4 md:px-10 lg:px-20 py-6">
         <nav className="flex items-center gap-2 text-sm font-medium text-slate-500 mb-6">

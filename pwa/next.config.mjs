@@ -18,7 +18,7 @@ function toRemotePattern(urlLike) {
 const dynamicSources = [
   process.env.NEXT_PUBLIC_WP_URL,
   process.env.NEXT_PUBLIC_WP_PUBLIC_URL,
-  process.env.SAEG_WC_BASE_URL,
+  process.env.AGROPAG_WC_BASE_URL,
 ];
 
 const dynamicPatterns = dynamicSources

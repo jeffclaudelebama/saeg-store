@@ -40,7 +40,7 @@ function mapOrder(order: WooOrder): SaegOrderListItem {
     status: String(order.status || 'pending'),
     total: Number(order.total || 0),
     currency: String(order.currency || 'XAF'),
-    billing_name: [order.billing?.first_name, order.billing?.last_name].filter(Boolean).join(' ').trim() || 'Client SAEG',
+    billing_name: [order.billing?.first_name, order.billing?.last_name].filter(Boolean).join(' ').trim() || 'Client AGROPAG',
     billing_phone: String(order.billing?.phone || ''),
     line_items: (order.line_items || []).map((item) => ({
       product_id: Number(item.product_id || 0),
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(payload);
   } catch (error) {
-    console.error('[SAEG] /api/orders failed', error);
+    console.error('[AGROPAG] /api/orders failed', error);
     return NextResponse.json({ error: 'Impossible de récupérer les commandes.', details: String(error) }, { status: 502 });
   }
 }

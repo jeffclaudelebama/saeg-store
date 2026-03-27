@@ -58,7 +58,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
           });
         })
         .catch((cause) => {
-          console.error('[SAEG] search modal products fetch failed', cause);
+          console.error('[AGROPAG] search modal products fetch failed', cause);
           setError('Impossible de charger les produits.');
         })
         .finally(() => {
@@ -123,7 +123,7 @@ export function SearchModal({ open, onClose }: SearchModalProps) {
         if (controller.signal.aborted) {
           return;
         }
-        console.error('[SAEG] search modal server search failed', cause);
+        console.error('[AGROPAG] search modal server search failed', cause);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);

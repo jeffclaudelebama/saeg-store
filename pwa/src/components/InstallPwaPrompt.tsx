@@ -8,11 +8,11 @@ export function InstallPwaPrompt() {
   if (!prompt.visible || prompt.mode === 'hidden') return null;
 
   return (
-    <div className="install-banner" role="dialog" aria-label="Installer la PWA SAEG">
+    <div className="install-banner" role="dialog" aria-label="Installer la PWA AGROPAG">
       <div className="install-banner__content">
         <div>
           <p className="install-banner__eyebrow">Installation rapide</p>
-          <h3 className="install-banner__title">Installer SAEG – La Boutique</h3>
+          <h3 className="install-banner__title">Installer AGROPAG – La Boutique</h3>
           <p className="install-banner__text">
             Accès plus rapide, écran d’accueil, expérience mobile optimisée.
           </p>

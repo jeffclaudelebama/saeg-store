@@ -1,9 +1,9 @@
 import { MarketingScaffold } from '@/components/MarketingScaffold';
-import { SAEG_EMAIL, SAEG_PHONE } from '@/lib/constants';
+import { AGROPAG_INFO_EMAIL, AGROPAG_PHONE } from '@/lib/constants';
 
 export default function ContactPage() {
   return (
-    <MarketingScaffold whatsappMessage="Bonjour SAEG, je souhaite vous contacter.">
+    <MarketingScaffold whatsappMessage="Bonjour AGROPAG, je souhaite vous contacter.">
       <main>
         <section className="relative py-20 bg-slate-50 overflow-hidden">
           <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
@@ -18,8 +18,8 @@ export default function ContactPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               ['location_on', 'Adresse', 'Libreville, Gabon'],
-              ['call', 'Téléphone', SAEG_PHONE],
-              ['mail', 'Email', SAEG_EMAIL],
+              ['call', 'Téléphone', AGROPAG_PHONE],
+              ['mail', 'Email', AGROPAG_INFO_EMAIL],
               ['schedule', 'Horaires', 'Lun - Sam: 08h00 - 18h00'],
             ].map(([icon, title, text]) => (
               <div key={title} className="bg-white p-8 rounded-xl shadow-xl shadow-slate-200/50 border border-slate-100 flex flex-col items-center text-center group hover:border-accent transition-all duration-300">
@@ -68,7 +68,7 @@ export default function ContactPage() {
               </div>
               <div className="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md p-4 rounded-xl border border-slate-200 shadow-xl">
                 <p className="text-primary font-bold text-sm uppercase mb-1">Notre emplacement</p>
-                <p className="text-slate-600 text-xs">Zone d’activité SAEG, Libreville. Nous servons aussi Akanda et Owendo.</p>
+                <p className="text-slate-600 text-xs">Zone d’activité AGROPAG, Libreville. Nous servons aussi Akanda et Owendo.</p>
               </div>
             </div>
           </div>

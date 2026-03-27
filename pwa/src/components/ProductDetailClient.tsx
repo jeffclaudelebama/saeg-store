@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import { KgSelector } from '@/components/KgSelector';
-import { SAEG_WHATSAPP_INTL } from '@/lib/constants';
+import { AGROPAG_WHATSAPP_INTL } from '@/lib/constants';
 import { useCart } from '@/providers/CartProvider';
 import { formatCurrency, formatKg } from '@/lib/format';
 import type { SaegProduct } from '@/types/saeg';
 
 export function ProductDetailClient({ product }: { product: SaegProduct }) {
   const { addItem } = useCart();
-  const whatsappNumber = SAEG_WHATSAPP_INTL;
+  const whatsappNumber = AGROPAG_WHATSAPP_INTL;
   const defaultQty = product.unit_type === 'kg' ? product.min_kg || 0.25 : 1;
   const [quantity, setQuantity] = useState<number>(defaultQty);
 
@@ -21,7 +21,7 @@ export function ProductDetailClient({ product }: { product: SaegProduct }) {
 
   const whatsappUrl = useMemo(() => {
     const message = [
-      'Bonjour SAEG,',
+      'Bonjour AGROPAG,',
       `Je souhaite commander: ${product.name}`,
       product.unit_type === 'kg' ? `Quantité: ${quantity.toFixed(2).replace('.', ',')} kg` : `Quantité: ${quantity}`,
       `Montant estimé: ${Math.round(total)} FCFA`,

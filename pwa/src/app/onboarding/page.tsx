@@ -12,7 +12,7 @@ export default function OnboardingPage() {
       <div className="mx-auto max-w-md space-y-4">
         <div className="text-center mb-6">
           <p className="text-xs font-bold uppercase tracking-widest text-primary/70">Onboarding</p>
-          <h1 className="mt-2 text-3xl font-black text-primary">Bienvenue sur SAEG</h1>
+          <h1 className="mt-2 text-3xl font-black text-primary">Bienvenue sur AGROPAG</h1>
         </div>
         {slides.map(([title, text, icon], idx) => (
           <section key={title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

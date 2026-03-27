@@ -1,15 +1,15 @@
-# SAEG Store Monorepo
+# AGROPAG Store Monorepo
 
-Monorepo pour la boutique SAEG (vente des invendus des marchés éphémères) :
+Monorepo pour la boutique AGROPAG (vente des invendus des marchés éphémères) :
 - Backoffice WordPress + WooCommerce (headless source) sur `admin.store.saeggabon.ga`
 - Front PWA Next.js (headless) sur `store.saeggabon.ga`
 
 ## Structure
 
-- `wp/` : plugin WordPress/WooCommerce SAEG + docs d'installation
+- `wp/` : plugin WordPress/WooCommerce AGROPAG + docs d'installation
 - `pwa/` : front Next.js App Router + PWA + API proxy WooCommerce REST
 - `infra/` : exemples de configuration Nginx/Caddy + templates `.env`
-- `data/` : CSV d'import catalogue produits SAEG
+- `data/` : CSV d'import catalogue produits AGROPAG
 - `docs/` : checklist de tests et notes de déploiement
 
 ## Prérequis
@@ -60,12 +60,12 @@ pnpm dev
 Voir `infra/env/pwa.env.example`.
 
 Clés importantes :
-- `SAEG_WC_BASE_URL=https://admin.store.saeggabon.ga`
-- `SAEG_WC_CONSUMER_KEY=...`
-- `SAEG_WC_CONSUMER_SECRET=...`
+- `AGROPAG_WC_BASE_URL=https://admin.store.saeggabon.ga`
+- `AGROPAG_WC_CONSUMER_KEY=...`
+- `AGROPAG_WC_CONSUMER_SECRET=...`
 - `NEXT_PUBLIC_SITE_URL=https://store.saeggabon.ga`
 - `NEXT_PUBLIC_WP_URL=https://admin.store.saeggabon.ga` (alias dev/prod pour les médias WP)
-- `NEXT_PUBLIC_SAEG_WHATSAPP_SHARE_NUMBER=24177638864`
+- `NEXT_PUBLIC_AGROPAG_WHATSAPP_SHARE_NUMBER=24177638864`
 
 ## CORS strict (WP -> front headless)
 
@@ -85,7 +85,7 @@ Les secrets WooCommerce restent côté serveur (Route Handlers App Router).
 ## Création des clés WooCommerce REST
 
 WooCommerce > Réglages > Avancé > API REST > Ajouter une clé :
-- Description : `SAEG PWA Proxy`
+- Description : `AGROPAG PWA Proxy`
 - Utilisateur : administrateur technique dédié
 - Permissions : `Read/Write`
 
@@ -96,7 +96,7 @@ La clé est utilisée uniquement côté serveur Next.js (API proxy). **Ne jamais
 1. Produits > Importer
 2. Utiliser `data/saeg-products-import.csv`
 3. Mapper les colonnes WooCommerce standard (nom, description, prix, catégories, images)
-4. Mapper les métadonnées SAEG via plugin :
+4. Mapper les métadonnées AGROPAG via plugin :
    - `saeg_unit`
    - `saeg_price_per_kg`
    - `saeg_step_kg`
@@ -142,6 +142,6 @@ pnpm start
   - `siteurl = https://admin.store.saeggabon.ga`
   - `home = https://admin.store.saeggabon.ga`
 - Si les URLs médias sont en `http://` alors que la PWA tourne en `https://`, le navigateur bloque (mixed content).
-- La PWA normalise les URLs reçues (relatives -> absolues, `http` -> `https` en prod sur domaines SAEG).
+- La PWA normalise les URLs reçues (relatives -> absolues, `http` -> `https` en prod sur domaines AGROPAG).
 - `next.config.mjs` autorise `admin.store.saeggabon.ga` et les hôtes de dev (`localhost`/`127.0.0.1`) via `images.remotePatterns`.
 - En local, définir `NEXT_PUBLIC_WP_URL` (ou `NEXT_PUBLIC_WP_PUBLIC_URL`) vers votre WordPress local, ex. `http://localhost:8080`.

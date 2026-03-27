@@ -14,7 +14,7 @@ import type { SaegCartValidationError, SaegCheckoutForm, SaegCommune, SaegDelive
 const CHECKOUT_STORAGE_KEY = 'saeg_checkout_form_v2';
 const CHECKOUT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
 const EMAIL_FALLBACK = 'store@saeggabon.ga';
-const PICKUP_ADDRESS = 'Retrait Marché SAEG';
+const PICKUP_ADDRESS = 'Retrait Marché AGROPAG';
 
 type CheckoutField =
   | 'first_name'
@@ -273,8 +273,8 @@ export function CheckoutPageClient() {
         });
         const validateData = await validateRes.json();
         if (process.env.NODE_ENV !== 'production') {
-          console.info('[SAEG][checkout] cart snapshot', cartSnapshot);
-          console.info('[SAEG][checkout] validateCart result', validateData);
+          console.info('[AGROPAG][checkout] cart snapshot', cartSnapshot);
+          console.info('[AGROPAG][checkout] validateCart result', validateData);
         }
         if (!validateData?.ok) {
           const errors = Array.isArray(validateData?.errors) ? (validateData.errors as SaegCartValidationError[]) : [];
@@ -406,7 +406,7 @@ export function CheckoutPageClient() {
                 <div className="ml-4 flex items-center justify-between w-full">
                   <div>
                     <p className="font-bold">Click & Collect</p>
-                    <p className="text-xs text-slate-500">Retrait gratuit au point SAEG</p>
+                    <p className="text-xs text-slate-500">Retrait gratuit au point AGROPAG</p>
                   </div>
                   <span className="text-sm font-bold text-primary">0 FCFA</span>
                 </div>
@@ -450,10 +450,10 @@ export function CheckoutPageClient() {
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <p className="text-sm font-bold text-primary">Paiement Mobile Money</p>
                   <p className="mt-2 text-xs font-semibold uppercase tracking-widest text-primary/80">
-                    Référence: SAEG-{'{orderId}'}-{mobileMoneySeed}
+                    Référence: AGROPAG-{'{orderId}'}-{mobileMoneySeed}
                   </p>
-                  <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : SAEG</p>
-                  <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : SAEG (bientôt disponible)</p>
+                  <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : AGROPAG</p>
+                  <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : AGROPAG (bientôt disponible)</p>
                   <p className="mt-3 text-xs text-slate-600">Effectuez le paiement, puis ajoutez la preuve.</p>
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label className="space-y-2">

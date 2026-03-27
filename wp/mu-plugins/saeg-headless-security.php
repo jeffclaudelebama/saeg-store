@@ -1,21 +1,21 @@
 <?php
 /**
- * Plugin Name: SAEG Headless Security (MU)
- * Description: CORS strict pour front headless SAEG + durcissement léger.
+ * Plugin Name: AGROPAG Headless Security (MU)
+ * Description: CORS strict pour front headless AGROPAG + durcissement léger.
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!defined('SAEG_ALLOWED_FRONT_ORIGIN')) {
-    define('SAEG_ALLOWED_FRONT_ORIGIN', 'https://store.saeggabon.ga');
+if (!defined('AGROPAG_ALLOWED_FRONT_ORIGIN')) {
+    define('AGROPAG_ALLOWED_FRONT_ORIGIN', 'https://store.saeggabon.ga');
 }
 
 add_filter('rest_pre_serve_request', function ($served, $result, $request, $server) {
     $origin = isset($_SERVER['HTTP_ORIGIN']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_ORIGIN'])) : '';
-    if ($origin && $origin === SAEG_ALLOWED_FRONT_ORIGIN) {
-        header('Access-Control-Allow-Origin: ' . SAEG_ALLOWED_FRONT_ORIGIN);
+    if ($origin && $origin === AGROPAG_ALLOWED_FRONT_ORIGIN) {
+        header('Access-Control-Allow-Origin: ' . AGROPAG_ALLOWED_FRONT_ORIGIN);
         header('Vary: Origin');
         header('Access-Control-Allow-Credentials: false');
         header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
@@ -37,12 +37,12 @@ remove_action('wp_head', 'wp_generator');
  * Rate limit simple sur les échecs de login WordPress (anti brute-force léger).
  * Complète un plugin dédié si installé.
  */
-if (!defined('SAEG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS')) {
-    define('SAEG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS', 5);
+if (!defined('AGROPAG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS')) {
+    define('AGROPAG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS', 5);
 }
 
-if (!defined('SAEG_LOGIN_RATE_LIMIT_WINDOW_SECONDS')) {
-    define('SAEG_LOGIN_RATE_LIMIT_WINDOW_SECONDS', 15 * MINUTE_IN_SECONDS);
+if (!defined('AGROPAG_LOGIN_RATE_LIMIT_WINDOW_SECONDS')) {
+    define('AGROPAG_LOGIN_RATE_LIMIT_WINDOW_SECONDS', 15 * MINUTE_IN_SECONDS);
 }
 
 if (!function_exists('saeg_security_client_ip')) {
@@ -121,11 +121,11 @@ add_action('wp_login_failed', function ($username) {
         'blocked_until' => 0,
     ];
 
-    if ($attempts >= SAEG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS) {
-        $payload['blocked_until'] = time() + SAEG_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
+    if ($attempts >= AGROPAG_LOGIN_RATE_LIMIT_MAX_ATTEMPTS) {
+        $payload['blocked_until'] = time() + AGROPAG_LOGIN_RATE_LIMIT_WINDOW_SECONDS;
     }
 
-    set_transient($key, $payload, SAEG_LOGIN_RATE_LIMIT_WINDOW_SECONDS);
+    set_transient($key, $payload, AGROPAG_LOGIN_RATE_LIMIT_WINDOW_SECONDS);
 });
 
 add_action('wp_login', function ($user_login, $user) {

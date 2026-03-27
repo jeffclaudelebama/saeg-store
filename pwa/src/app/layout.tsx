@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: `${APP_NAME}`,
     template: `%s | ${APP_NAME}`,
   },
-  description: 'Invendus des marchés éphémères SAEG. Vente au kilo, livraison locale Libreville/Akanda/Owendo et Click & Collect.',
+  description: 'Invendus des marchés éphémères AGROPAG. Vente au kilo, livraison locale Libreville/Akanda/Owendo et Click & Collect.',
   manifest: '/manifest.webmanifest',
   applicationName: APP_NAME,
   icons: {
