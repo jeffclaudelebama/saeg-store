@@ -4,7 +4,12 @@ import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
 
 const PRODUCT_FALLBACK_IMAGE = '/img/placeholder-produit.png';
-const PRODUCTION_MEDIA_HOSTS = new Set(['admin.store.saeggabon.ga', 'store.saeggabon.ga']);
+const PRODUCTION_MEDIA_HOSTS = new Set([
+  'admin.agropag.ga',
+  'boutique.agropag.ga',
+  'admin.store.saeggabon.ga',
+  'store.saeggabon.ga',
+]);
 const BLOCKED_PLACEHOLDER_HOSTS = new Set(['via.placeholder.com', 'placehold.co', 'dummyimage.com']);
 const WOO_PAGE_SIZE = 100;
 const WOO_MAX_PAGE_GUARD = 20;

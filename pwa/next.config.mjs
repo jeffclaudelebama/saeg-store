@@ -27,6 +27,10 @@ const dynamicPatterns = dynamicSources
   .filter((pattern) => pattern.protocol === 'https');
 
 const remotePatterns = [
+  { protocol: 'https', hostname: 'admin.agropag.ga' },
+  { protocol: 'https', hostname: 'www.admin.agropag.ga' },
+  { protocol: 'https', hostname: 'boutique.agropag.ga' },
+  { protocol: 'https', hostname: 'www.boutique.agropag.ga' },
   { protocol: 'https', hostname: 'admin.store.saeggabon.ga' },
   { protocol: 'https', hostname: 'www.admin.store.saeggabon.ga' },
   { protocol: 'https', hostname: 'store.saeggabon.ga' },

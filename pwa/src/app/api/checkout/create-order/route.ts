@@ -316,7 +316,7 @@ export async function POST(request: Request) {
     first_name: form.first_name,
     last_name: form.last_name || '',
     phone: normalizedBillingPhone,
-    email: form.email || 'store@saeggabon.ga',
+    email: form.email || 'commande@agropag.ga',
     address_1: form.address_1 || (form.modeLivraison === 'pickup' ? 'Retrait marché AGROPAG' : ''),
     address_2: form.address_2 || '',
     city: form.commune,

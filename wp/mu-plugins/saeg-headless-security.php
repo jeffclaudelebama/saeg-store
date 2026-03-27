@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 }
 
 if (!defined('AGROPAG_ALLOWED_FRONT_ORIGIN')) {
-    define('AGROPAG_ALLOWED_FRONT_ORIGIN', 'https://store.saeggabon.ga');
+    define('AGROPAG_ALLOWED_FRONT_ORIGIN', 'https://boutique.agropag.ga');
 }
 
 add_filter('rest_pre_serve_request', function ($served, $result, $request, $server) {

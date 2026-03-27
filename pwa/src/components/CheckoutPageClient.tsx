@@ -13,7 +13,7 @@ import type { SaegCartValidationError, SaegCheckoutForm, SaegCommune, SaegDelive
 
 const CHECKOUT_STORAGE_KEY = 'saeg_checkout_form_v2';
 const CHECKOUT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000;
-const EMAIL_FALLBACK = 'store@saeggabon.ga';
+const EMAIL_FALLBACK = 'commande@agropag.ga';
 const PICKUP_ADDRESS = 'Retrait Marché AGROPAG';
 
 type CheckoutField =

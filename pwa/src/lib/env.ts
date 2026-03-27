@@ -13,11 +13,11 @@ function getFirstEnv(names: string[], fallback = ''): string {
 }
 
 function getWpPublicUrl(): string {
-  return process.env.NEXT_PUBLIC_WP_URL ?? process.env.NEXT_PUBLIC_WP_PUBLIC_URL ?? 'https://admin.store.saeggabon.ga';
+  return process.env.NEXT_PUBLIC_WP_URL ?? process.env.NEXT_PUBLIC_WP_PUBLIC_URL ?? 'https://admin.agropag.ga';
 }
 
 export const env = {
-  siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'https://store.saeggabon.ga'),
+  siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'https://boutique.agropag.ga'),
   wpPublicUrl: getWpPublicUrl(),
   gaMeasurementId: getEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID', ''),
   defaultCurrency: getEnv('AGROPAG_DEFAULT_CURRENCY', 'XAF'),

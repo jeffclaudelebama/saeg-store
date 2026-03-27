@@ -9,7 +9,7 @@ import { BottomNav } from '@/components/BottomNav';
 import { APP_NAME } from '@/lib/constants';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://store.saeggabon.ga';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://boutique.agropag.ga';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

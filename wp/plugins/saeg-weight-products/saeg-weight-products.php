@@ -35,7 +35,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
         private const WHATSAPP_LEAD_POST_TYPE = 'saeg_whatsapp_lead';
         private const CONTACT_PHONE = '011453040';
         private const CONTACT_WHATSAPP = '24177638864';
-        private const CONTACT_EMAIL = 'store@saeggabon.ga';
+        private const CONTACT_EMAIL = 'commande@agropag.ga';
 
         public static function boot(): void {
             add_action('plugins_loaded', [__CLASS__, 'init']);
