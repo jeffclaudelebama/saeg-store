@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { env } from '@/lib/env';
+import { createBackendHeaders } from '@/lib/server/woo';
 
 function normalizeGabonPhone(value: string): string | null {
   const digits = value.replace(/\D+/g, '');
@@ -38,10 +39,10 @@ export async function POST(request: Request) {
   const wpBase = env.wpPublicUrl.replace(/\/$/, '');
   const wpResponse = await fetch(`${wpBase}/wp-json/saeg/v1/whatsapp-leads`, {
     method: 'POST',
-    headers: {
+    headers: createBackendHeaders({
       'Content-Type': 'application/json',
       'X-AGROPAG-Token': token,
-    },
+    }),
     body: JSON.stringify({
       phone: normalizedPhone,
       source: 'footer_newsletter',

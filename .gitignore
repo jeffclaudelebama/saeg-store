@@ -22,3 +22,5 @@ wp/wp-content/uploads/
 *.log
 
 pwa/tsconfig.tsbuildinfo
+.vercel
+.env*.local

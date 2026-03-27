@@ -3,7 +3,7 @@ import { validateCartAgainstProducts } from '@/lib/cart-validation';
 import { env, hasWooEnv } from '@/lib/env';
 import { normalizeGabonPhone } from '@/lib/phone';
 import { getProductServer } from '@/lib/server/products';
-import { wooFetch } from '@/lib/server/woo';
+import { createBackendHeaders, wooFetch } from '@/lib/server/woo';
 import type { SaegCartItem, SaegCheckoutForm, SaegProduct } from '@/types/saeg';
 
 interface CheckoutPayload {
@@ -96,10 +96,10 @@ async function createWooOrderRaw(payload: Record<string, unknown>) {
 
   const response = await fetch(endpoint, {
     method: 'POST',
-    headers: {
+    headers: createBackendHeaders({
       Authorization: `Basic ${token}`,
       'Content-Type': 'application/json',
-    },
+    }),
     body: JSON.stringify(payload),
     cache: 'no-store',
   });

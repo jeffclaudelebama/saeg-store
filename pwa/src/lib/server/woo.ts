@@ -1,6 +1,9 @@
 import { env, hasWooEnv } from '@/lib/env';
 import { REVALIDATE_PRODUCTS_SECONDS } from '@/lib/constants';
 
+const AGROPAG_BACKEND_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 AGROPAG-Server/1.0';
+
 function authHeader(): string {
   const token = Buffer.from(`${env.wcKey}:${env.wcSecret}`).toString('base64');
   return `Basic ${token}`;
@@ -17,6 +20,17 @@ export class WooUnavailableError extends Error {
   }
 }
 
+export function createBackendHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init);
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json, text/plain, */*');
+  }
+  if (!headers.has('User-Agent')) {
+    headers.set('User-Agent', AGROPAG_BACKEND_USER_AGENT);
+  }
+  return headers;
+}
+
 export async function wooFetch<T>(path: string, init: RequestInit & { revalidate?: number } = {}): Promise<T> {
   if (!hasWooEnv()) {
     throw new WooUnavailableError('Variables WooCommerce manquantes');
@@ -26,13 +40,14 @@ export async function wooFetch<T>(path: string, init: RequestInit & { revalidate
   const isFormDataBody = typeof FormData !== 'undefined' && rest.body instanceof FormData;
   const method = String(rest.method ?? 'GET').toUpperCase();
   const isWriteMethod = method !== 'GET' && method !== 'HEAD';
+  const requestHeaders = createBackendHeaders({
+    Authorization: authHeader(),
+    ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
+    ...headers,
+  });
   const baseOptions = {
     ...rest,
-    headers: {
-      Authorization: authHeader(),
-      ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
-      ...headers,
-    },
+    headers: requestHeaders,
   };
 
   const res = await fetch(`${baseUrl()}${path}`, {
