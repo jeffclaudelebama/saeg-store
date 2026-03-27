@@ -184,7 +184,12 @@ function normalizeStoredItems(input: unknown): { items: SaegCartItem[]; warnings
 function reducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'hydrate':
-      return { items: action.items, hydrated: true, hydrateWarnings: action.warnings };
+      return {
+        ...state,
+        items: action.items,
+        hydrated: true,
+        hydrateWarnings: action.warnings,
+      };
     case 'add': {
       const key = makeKey(action.product.id);
       const existing = state.items.find((i) => i.key === key);
