@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
 import { ProductCard } from '@/components/ProductCard';
 import { getCategoriesServer, getProductsServer } from '@/lib/server/products';
@@ -88,10 +89,20 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
               {categories.slice(0, 4).map((category) => (
                 <Link key={category.id} className="group relative aspect-square overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/10" href={`/catalogue?category=${encodeURIComponent(category.slug)}`}>
+                  {category.image ? (
+                    <Image
+                      src={category.image}
+                      alt={category.name}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white/30 text-[72px]">nutrition</span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-white/30 text-[72px]">nutrition</span>
-                  </div>
                   <div className="absolute bottom-4 left-4 right-4">
                     <h3 className="text-white font-bold text-xl leading-tight">{category.name}</h3>
                   </div>

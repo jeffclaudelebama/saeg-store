@@ -1,4 +1,4 @@
-import { env } from '@/lib/env';
+import { env, hasWooEnv } from '@/lib/env';
 import { REVALIDATE_PRODUCTS_SECONDS, REVALIDATE_PRODUCT_SECONDS } from '@/lib/constants';
 import { wooFetch, WooUnavailableError } from '@/lib/server/woo';
 import type { SaegProduct, SaegCategory } from '@/types/saeg';
@@ -18,6 +18,33 @@ type WooMeta = { key?: string; value?: unknown };
 type WooImage = { src?: string | null };
 type WooTag = { id?: number; slug?: string; name?: string };
 type WooCategory = { id: number; slug: string; name: string; count?: number };
+type StoreApiImage = { src?: string | null };
+type StoreApiCategory = {
+  id: number;
+  slug?: string;
+  name?: string;
+  image?: StoreApiImage | null;
+};
+type StoreApiPrices = {
+  price?: string | null;
+  regular_price?: string | null;
+  sale_price?: string | null;
+  currency_code?: string | null;
+  currency_symbol?: string | null;
+};
+type StoreApiProduct = {
+  id: number;
+  slug?: string;
+  name?: string;
+  permalink?: string;
+  description?: string | null;
+  short_description?: string | null;
+  prices?: StoreApiPrices | null;
+  images?: WooImage[];
+  categories?: WooCategory[];
+  on_sale?: boolean;
+  is_in_stock?: boolean;
+};
 type ProductQuery = {
   search?: string;
   category?: string;
@@ -67,12 +94,20 @@ export async function getProductsServerResult(params?: ProductQuery): Promise<Pr
   const perPage = Math.max(1, Math.min(Math.floor(perPageInput), 500));
 
   try {
-    const products = await fetchWooProducts({
-      search: params?.search,
-      category: params?.category,
-      noCache: params?.noCache,
-    });
-    const mapped = products.map(mapWooProduct).map(normalizeProduct);
+    const products = hasWooEnv()
+      ? await fetchWooProducts({
+          search: params?.search,
+          category: params?.category,
+          noCache: params?.noCache,
+        })
+      : await fetchStoreApiProducts({
+          search: params?.search,
+          category: params?.category,
+          noCache: params?.noCache,
+        });
+    const mapped = products
+      .map((product) => (hasWooEnv() ? mapWooProduct(product as WooProduct) : mapStoreApiProduct(product as StoreApiProduct)))
+      .map(normalizeProduct);
     const filtered = mapped.filter((product) => {
       if (params?.dailyOnly && !product.is_daily_surplus) {
         return false;
@@ -119,6 +154,17 @@ export async function getProductServer(identifier: number | string, options?: { 
     return null;
   }
 
+  if (!hasWooEnv()) {
+    try {
+      const products = await fetchStoreApiProducts({ identifier: token, noCache: options?.noCache, perPage: 1 });
+      const product = products[0];
+      return product ? normalizeProduct(mapStoreApiProduct(product)) : null;
+    } catch (error) {
+      console.error('[AGROPAG] getProductServer public fallback error:', error);
+      return null;
+    }
+  }
+
   if (/^\d+$/.test(token)) {
     const id = Number(token);
     if (!Number.isFinite(id) || id <= 0) {
@@ -160,36 +206,7 @@ export async function getProductServer(identifier: number | string, options?: { 
 
 export async function getCategoriesServer(options?: { noCache?: boolean }): Promise<SaegCategory[]> {
   try {
-    const categories: SaegCategory[] = [];
-    for (let page = 1; page <= WOO_MAX_PAGE_GUARD; page += 1) {
-      const query = new URLSearchParams({
-        per_page: String(WOO_PAGE_SIZE),
-        page: String(page),
-        hide_empty: 'false',
-      });
-      let batch: WooCategory[];
-      try {
-        batch = await wooFetch<WooCategory[]>(`/wp-json/wc/v3/products/categories?${query.toString()}`, getWooFetchInit(options?.noCache, REVALIDATE_PRODUCT_SECONDS));
-      } catch (error) {
-        if (isInvalidWooPageError(error)) {
-          break;
-        }
-        throw error;
-      }
-      if (!Array.isArray(batch) || batch.length === 0) {
-        break;
-      }
-      categories.push(
-        ...batch.map((category) => ({
-          id: category.id,
-          slug: normalizeText(category.slug),
-          name: normalizeText(category.name),
-        })),
-      );
-      if (batch.length < WOO_PAGE_SIZE) {
-        break;
-      }
-    }
+    const categories = await fetchStoreApiCategories(options?.noCache);
     return dedupeCategories(categories).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   } catch (error) {
     if (!(error instanceof WooUnavailableError)) {
@@ -233,6 +250,86 @@ async function fetchWooProducts(params?: { search?: string; category?: string; n
     }
   }
   return items;
+}
+
+async function fetchStoreApiProducts(params?: {
+  search?: string;
+  category?: string;
+  identifier?: string;
+  noCache?: boolean;
+  perPage?: number;
+}): Promise<StoreApiProduct[]> {
+  const query = new URLSearchParams({
+    per_page: String(params?.perPage ?? WOO_PAGE_SIZE),
+  });
+  const search = normalizeText(params?.search);
+  if (search) {
+    query.set('search', search);
+  }
+  if (params?.identifier) {
+    const identifier = normalizeText(params.identifier);
+    if (/^\d+$/.test(identifier)) {
+      query.set('include', identifier);
+    } else {
+      query.set('slug', identifier);
+    }
+  }
+  const categoryId = await resolveStoreCategoryId(params?.category, params?.noCache);
+  if (typeof categoryId === 'number') {
+    query.set('category', String(categoryId));
+  }
+
+  const response = await fetch(`${ensureTrailingSlash(env.wpPublicUrl)}wp-json/wc/store/v1/products?${query.toString()}`, {
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 AGROPAG-Store/1.0',
+    },
+    ...(params?.noCache ? { cache: 'no-store' as const } : { next: { revalidate: REVALIDATE_PRODUCTS_SECONDS } }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Store API products failed ${response.status}`);
+  }
+
+  return (await response.json()) as StoreApiProduct[];
+}
+
+async function fetchStoreApiCategories(noCache?: boolean): Promise<SaegCategory[]> {
+  const response = await fetch(`${ensureTrailingSlash(env.wpPublicUrl)}wp-json/wc/store/v1/products/categories`, {
+    headers: {
+      Accept: 'application/json, text/plain, */*',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 AGROPAG-Store/1.0',
+    },
+    ...(noCache ? { cache: 'no-store' as const } : { next: { revalidate: REVALIDATE_PRODUCT_SECONDS } }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Store API categories failed ${response.status}`);
+  }
+
+  const categories = (await response.json()) as StoreApiCategory[];
+  return categories.map((category) => ({
+    id: Number(category.id),
+    slug: normalizeText(category.slug),
+    name: normalizeText(category.name),
+    image: normalizeImageUrl(normalizeText(category.image?.src)),
+  }));
+}
+
+async function resolveStoreCategoryId(category?: string, noCache?: boolean): Promise<number | null> {
+  const value = normalizeText(category);
+  if (!value) {
+    return null;
+  }
+  if (/^\d+$/.test(value)) {
+    return Number(value);
+  }
+  const categories = await fetchStoreApiCategories(noCache);
+  const target = value.toLowerCase();
+  const found = categories.find((item) => item.slug.toLowerCase() === target || item.name.toLowerCase() === target);
+  return found ? found.id : null;
 }
 
 async function resolveWooCategoryId(category?: string, noCache?: boolean): Promise<number | null> {
@@ -341,6 +438,48 @@ function mapWooProduct(product: WooProduct): SaegProduct {
     is_daily_surplus: Boolean(isDailySurplus),
     origin: normalizeText(resolveValue(saegMap, metaMap, ['origin', 'saeg_origin'])) || 'AGROPAG',
     updated_at: normalizeText(product.date_modified_gmt ?? product.date_modified ?? '') || null,
+  };
+}
+
+function mapStoreApiProduct(product: StoreApiProduct): SaegProduct {
+  const prices = product.prices ?? {};
+  const regularPrice = toCurrencyNumber(prices.regular_price);
+  const salePrice = toCurrencyNumber(prices.sale_price);
+  const rawPrice = toCurrencyNumber(prices.price);
+  const fallbackPrice = salePrice || rawPrice || regularPrice;
+  const normalizedCategories: SaegCategory[] = dedupeCategories(
+    (product.categories ?? []).map((category) => ({
+      id: Number(category.id),
+      slug: normalizeText(category.slug),
+      name: normalizeText(category.name),
+    })),
+  );
+
+  return {
+    id: Number(product.id),
+    slug: normalizeText(product.slug) || `produit-${product.id}`,
+    name: normalizeText(product.name) || `Produit ${product.id}`,
+    permalink: normalizeText(product.permalink),
+    description: sanitizeRichText(product.description),
+    short_description: sanitizeRichText(product.short_description),
+    images: mapWooImages(product.images),
+    categories: normalizedCategories,
+    currency: normalizeText(prices.currency_code) || env.defaultCurrency || 'XAF',
+    currency_symbol: normalizeText(prices.currency_symbol) || 'FCFA',
+    price: Math.round(fallbackPrice),
+    regular_price: Math.round(regularPrice || fallbackPrice),
+    sale_price: Math.round(salePrice),
+    unit_type: 'unit',
+    price_per_kg: 0,
+    step_kg: 1,
+    min_kg: 1,
+    stock_kg: null,
+    low_stock_threshold: 0,
+    low_stock: false,
+    stock_status: product.is_in_stock ? 'instock' : 'outofstock',
+    is_daily_surplus: Boolean(product.on_sale),
+    origin: 'AGROPAG',
+    updated_at: null,
   };
 }
 

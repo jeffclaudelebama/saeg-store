@@ -8,6 +8,7 @@ export interface SaegCategory {
   id: number;
   slug: string;
   name: string;
+  image?: string | null;
 }
 
 export interface SaegProduct {
