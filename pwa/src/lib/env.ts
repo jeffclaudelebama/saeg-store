@@ -20,6 +20,7 @@ export const env = {
   siteUrl: getEnv('NEXT_PUBLIC_SITE_URL', 'https://boutique.agropag.ga'),
   wpPublicUrl: getWpPublicUrl(),
   gaMeasurementId: getEnv('NEXT_PUBLIC_GA_MEASUREMENT_ID', ''),
+  accountSessionSecret: getEnv('AGROPAG_ACCOUNT_SESSION_SECRET', ''),
   defaultCurrency: getEnv('AGROPAG_DEFAULT_CURRENCY', 'XAF'),
   whatsappShareNumber: getEnv('AGROPAG_WHATSAPP_SHARE_NUMBER', '24177638864'),
   orderStatusOnCreate: getEnv('AGROPAG_ORDER_STATUS_ON_CREATE', 'pending'),
@@ -33,5 +34,19 @@ export const env = {
 };
 
 export function hasWooEnv(): boolean {
-  return Boolean(env.wcBaseUrl && env.wcKey && env.wcSecret);
+  return Boolean(env.wcBaseUrl.trim() && env.wcKey.trim() && env.wcSecret.trim());
+}
+
+export function missingWooEnvNames(): string[] {
+  const missing: string[] = [];
+  if (!env.wcBaseUrl.trim()) {
+    missing.push('AGROPAG_WC_BASE_URL');
+  }
+  if (!env.wcKey.trim()) {
+    missing.push('AGROPAG_WC_CONSUMER_KEY');
+  }
+  if (!env.wcSecret.trim()) {
+    missing.push('AGROPAG_WC_CONSUMER_SECRET');
+  }
+  return missing;
 }

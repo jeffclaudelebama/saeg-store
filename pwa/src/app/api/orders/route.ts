@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasWooEnv } from '@/lib/env';
+import { getAccountSession } from '@/lib/server/account-session';
 import { getOrderMetaSummary, getOrderStatusView } from '@/lib/order-status';
 import { normalizeGabonPhone } from '@/lib/phone';
 import { wooFetch } from '@/lib/server/woo';
@@ -70,7 +71,8 @@ function mapOrder(order: WooOrder): SaegOrderListItem {
 }
 
 export async function GET(request: NextRequest) {
-  const rawPhone = String(request.nextUrl.searchParams.get('phone') || '').trim();
+  const session = await getAccountSession();
+  const rawPhone = String(request.nextUrl.searchParams.get('phone') || session?.phone || '').trim();
   const normalizedPhone = normalizeGabonPhone(rawPhone);
   const idParam = request.nextUrl.searchParams.get('id');
   const orderId = idParam ? Number(idParam) : null;
@@ -84,8 +86,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!hasWooEnv()) {
-    const empty: SaegOrdersResponse = { items: [], count: 0, phone: normalizedPhone };
-    return NextResponse.json(empty);
+    return NextResponse.json({ error: 'WooCommerce indisponible.' }, { status: 503 });
   }
 
   try {

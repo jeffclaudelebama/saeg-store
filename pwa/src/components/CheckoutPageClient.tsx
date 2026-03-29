@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BeginCheckoutTracker } from '@/components/EventTrackers';
 import { ErrorState, EmptyState } from '@/components/UiStates';
-import { loadAccountProfile, saveAccountProfile } from '@/lib/account-profile';
+import { fetchAccountProfile, saveAccountProfile } from '@/lib/account-profile';
 import { getDeliveryFee } from '@/lib/delivery';
 import { formatCurrency } from '@/lib/format';
 import { normalizeGabonPhone } from '@/lib/phone';
@@ -148,20 +148,23 @@ export function CheckoutPageClient() {
   }, [initialCommune, initialMode]);
 
   useEffect(() => {
-    const profile = loadAccountProfile();
-    if (!profile) {
-      return;
-    }
-    setForm((prev) => ({
-      ...prev,
-      first_name: prev.first_name || profile.first_name || '',
-      last_name: prev.last_name || profile.last_name || '',
-      telephone: prev.telephone || profile.phone || '',
-      email: prev.email || profile.email || '',
-      commune: prev.commune || profile.city || 'Libreville',
-      address_1: prev.address_1 || profile.address_1 || '',
-      address_2: prev.address_2 || profile.address_2 || '',
-    }));
+    fetchAccountProfile()
+      .then((profile) => {
+        if (!profile) {
+          return;
+        }
+        setForm((prev) => ({
+          ...prev,
+          first_name: prev.first_name || profile.first_name || '',
+          last_name: prev.last_name || profile.last_name || '',
+          telephone: prev.telephone || profile.phone || '',
+          email: prev.email || profile.email || '',
+          commune: prev.commune || profile.city || 'Libreville',
+          address_1: prev.address_1 || profile.address_1 || '',
+          address_2: prev.address_2 || profile.address_2 || '',
+        }));
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -188,22 +191,6 @@ export function CheckoutPageClient() {
     };
     window.localStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(payload));
   }, [form]);
-
-  useEffect(() => {
-    const normalizedPhone = normalizeGabonPhone(form.telephone);
-    if (!normalizedPhone) {
-      return;
-    }
-    saveAccountProfile({
-      phone: normalizedPhone,
-      first_name: form.first_name || '',
-      last_name: form.last_name || '',
-      email: form.email || '',
-      address_1: form.address_1 || '',
-      address_2: form.address_2 || '',
-      city: form.commune,
-    });
-  }, [form.telephone, form.first_name, form.last_name, form.email, form.address_1, form.address_2, form.commune]);
 
   const shipping = getDeliveryFee(form.commune, form.modeLivraison);
   const total = subtotal + shipping;
@@ -298,6 +285,15 @@ export function CheckoutPageClient() {
         }
 
         const order = data.order;
+        void saveAccountProfile({
+          phone: next.telephone,
+          first_name: next.first_name || '',
+          last_name: next.last_name || '',
+          email: next.email || '',
+          address_1: next.address_1 || '',
+          address_2: next.address_2 || '',
+          city: next.commune,
+        }).catch(() => {});
         clearCart();
         if (typeof window !== 'undefined') {
           window.localStorage.removeItem(CHECKOUT_STORAGE_KEY);

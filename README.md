@@ -1,8 +1,8 @@
 # AGROPAG Store Monorepo
 
 Monorepo pour la boutique AGROPAG (vente des invendus des marchés éphémères) :
-- Backoffice WordPress + WooCommerce (headless source) sur `admin.store.saeggabon.ga`
-- Front PWA Next.js (headless) sur `store.saeggabon.ga`
+- Backoffice WordPress + WooCommerce (headless source) sur `admin.agropag.ga`
+- Front PWA Next.js (headless) sur `boutique.agropag.ga`
 
 ## Structure
 
@@ -23,7 +23,7 @@ Monorepo pour la boutique AGROPAG (vente des invendus des marchés éphémères)
 
 ## Installation rapide (aperçu)
 
-### 1) WordPress / WooCommerce (`admin.store.saeggabon.ga`)
+### 1) WordPress / WooCommerce (`admin.agropag.ga`)
 
 1. Installer WordPress latest stable.
 2. Activer WooCommerce latest stable.
@@ -40,7 +40,7 @@ Monorepo pour la boutique AGROPAG (vente des invendus des marchés éphémères)
    - plugin cache compatible headless (ex. Cache Enabler) sans mettre en cache `/wp-json/`
 7. Créer une clé WooCommerce REST en lecture/écriture minimale pour les commandes.
 
-### 2) PWA Next.js (`store.saeggabon.ga`)
+### 2) PWA Next.js (`boutique.agropag.ga`)
 
 ```bash
 cd /Users/monsieurpitty/saeg-store
@@ -60,16 +60,17 @@ pnpm dev
 Voir `infra/env/pwa.env.example`.
 
 Clés importantes :
-- `AGROPAG_WC_BASE_URL=https://admin.store.saeggabon.ga`
+- `AGROPAG_WC_BASE_URL=https://admin.agropag.ga`
 - `AGROPAG_WC_CONSUMER_KEY=...`
 - `AGROPAG_WC_CONSUMER_SECRET=...`
-- `NEXT_PUBLIC_SITE_URL=https://store.saeggabon.ga`
-- `NEXT_PUBLIC_WP_URL=https://admin.store.saeggabon.ga` (alias dev/prod pour les médias WP)
+- `NEXT_PUBLIC_SITE_URL=https://boutique.agropag.ga`
+- `NEXT_PUBLIC_WP_URL=https://admin.agropag.ga` (alias dev/prod pour les médias WP)
+- `AGROPAG_ACCOUNT_SESSION_SECRET=...` (secret serveur pour la session OTP côté Next.js)
 - `NEXT_PUBLIC_AGROPAG_WHATSAPP_SHARE_NUMBER=24177638864`
 
 ## CORS strict (WP -> front headless)
 
-Le MU-plugin fourni limite les origines REST autorisées à `https://store.saeggabon.ga` (configurable via constante).
+Le MU-plugin fourni limite les origines REST autorisées à `https://boutique.agropag.ga` (configurable via constante).
 
 ## Endpoints proxy Next.js (serveur uniquement)
 
@@ -79,6 +80,9 @@ Le MU-plugin fourni limite les origines REST autorisées à `https://store.saegg
 - `POST /api/cart/validate`
 - `POST /api/checkout/create-order`
 - `GET /api/tracking?orderNumber=...&phone=...`
+- `GET/PUT /api/account/profile`
+- `POST /api/account/otp/request`
+- `POST /api/account/otp/verify`
 
 Les secrets WooCommerce restent côté serveur (Route Handlers App Router).
 
@@ -134,14 +138,15 @@ pnpm start
 - Ne pas cacher `/wp-json/*` et webhooks WooCommerce
 - Secrets uniquement côté serveur Next.js (Route Handlers)
 - OpenGraph/SEO configurés côté Next.js
+- OTP production via Twilio Verify côté backend WordPress (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID`)
 
 ## Images WordPress (éviter les images cassées)
 
 - En production, utiliser des URLs absolues HTTPS pour toutes les images produits (Media Library WordPress).
 - Vérifier les options WordPress :
-  - `siteurl = https://admin.store.saeggabon.ga`
-  - `home = https://admin.store.saeggabon.ga`
+  - `siteurl = https://admin.agropag.ga`
+  - `home = https://admin.agropag.ga`
 - Si les URLs médias sont en `http://` alors que la PWA tourne en `https://`, le navigateur bloque (mixed content).
 - La PWA normalise les URLs reçues (relatives -> absolues, `http` -> `https` en prod sur domaines AGROPAG).
-- `next.config.mjs` autorise `admin.store.saeggabon.ga` et les hôtes de dev (`localhost`/`127.0.0.1`) via `images.remotePatterns`.
+- `next.config.mjs` autorise `admin.agropag.ga`, `boutique.agropag.ga` et les hôtes de dev (`localhost`/`127.0.0.1`) via `images.remotePatterns`.
 - En local, définir `NEXT_PUBLIC_WP_URL` (ou `NEXT_PUBLIC_WP_PUBLIC_URL`) vers votre WordPress local, ex. `http://localhost:8080`.

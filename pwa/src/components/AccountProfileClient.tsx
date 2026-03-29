@@ -4,8 +4,8 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { clearAccountSession, loadAccountSession, saveAccountSession } from '@/lib/account-session';
-import { loadAccountProfile, saveAccountProfile, type SaegAccountProfile } from '@/lib/account-profile';
+import { clearAccountSession } from '@/lib/account-session';
+import { fetchAccountProfile, saveAccountProfile, type SaegAccountProfile } from '@/lib/account-profile';
 import { normalizeGabonPhone } from '@/lib/phone';
 import type { SaegCommune } from '@/types/saeg';
 
@@ -30,25 +30,27 @@ export function AccountProfileClient() {
   });
 
   useEffect(() => {
-    const session = loadAccountSession();
-    if (!session?.phone) {
-      router.replace('/compte');
-      return;
-    }
-    const profile = loadAccountProfile();
-    setForm({
-      phone: profile?.phone || session.phone,
-      first_name: profile?.first_name || '',
-      last_name: profile?.last_name || '',
-      email: profile?.email || '',
-      address_1: profile?.address_1 || '',
-      address_2: profile?.address_2 || '',
-      city: profile?.city || 'Libreville',
-    });
-    setReady(true);
+    fetchAccountProfile()
+      .then((profile) => {
+        if (!profile?.phone) {
+          router.replace('/compte');
+          return;
+        }
+        setForm({
+          phone: profile.phone,
+          first_name: profile.first_name || '',
+          last_name: profile.last_name || '',
+          email: profile.email || '',
+          address_1: profile.address_1 || '',
+          address_2: profile.address_2 || '',
+          city: profile.city || 'Libreville',
+        });
+        setReady(true);
+      })
+      .catch(() => router.replace('/compte'));
   }, [router]);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
@@ -60,24 +62,28 @@ export function AccountProfileClient() {
     }
 
     setSaving(true);
-    const payload: SaegAccountProfile = {
-      phone: normalizedPhone,
-      first_name: (form.first_name || '').trim(),
-      last_name: (form.last_name || '').trim(),
-      email: (form.email || '').trim(),
-      address_1: (form.address_1 || '').trim(),
-      address_2: (form.address_2 || '').trim(),
-      city: form.city || 'Libreville',
-    };
-    saveAccountProfile(payload);
-    saveAccountSession(normalizedPhone);
-    setForm(payload);
-    setSaving(false);
-    setSuccess('Profil enregistré.');
+    try {
+      const payload: SaegAccountProfile = {
+        phone: normalizedPhone,
+        first_name: (form.first_name || '').trim(),
+        last_name: (form.last_name || '').trim(),
+        email: (form.email || '').trim(),
+        address_1: (form.address_1 || '').trim(),
+        address_2: (form.address_2 || '').trim(),
+        city: form.city || 'Libreville',
+      };
+      const saved = await saveAccountProfile(payload);
+      setForm(saved);
+      setSuccess('Profil enregistré.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Impossible d’enregistrer le profil.');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function onLogout() {
-    clearAccountSession();
+  async function onLogout() {
+    await clearAccountSession();
     router.push('/compte');
   }
 
@@ -89,7 +95,7 @@ export function AccountProfileClient() {
     <div className="mx-auto max-w-3xl space-y-4">
       <form onSubmit={onSubmit} className="rounded-xl border border-slate-200 bg-white p-6 md:p-8">
         <h2 className="text-xl font-black text-primary">Mon profil</h2>
-        <p className="mt-2 text-sm text-slate-600">Ces informations sont stockées localement pour accélérer votre checkout.</p>
+        <p className="mt-2 text-sm text-slate-600">Ces informations sont enregistrées côté serveur et réutilisées sur vos prochaines commandes.</p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="space-y-1">
@@ -171,7 +177,7 @@ export function AccountProfileClient() {
           <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={saving}>
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
-          <Link href={`/compte/commandes?phone=${encodeURIComponent(form.phone)}`} className="btn btn-ghost w-full sm:w-auto text-center">
+          <Link href={{ pathname: '/compte/commandes', query: { phone: form.phone } }} className="btn btn-ghost w-full sm:w-auto text-center">
             Voir mes commandes
           </Link>
           <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={onLogout}>

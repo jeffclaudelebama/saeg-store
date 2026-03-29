@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasWooEnv } from '@/lib/env';
+import { hasWooEnv, missingWooEnvNames } from '@/lib/env';
 import { getOrderMetaSummary, getOrderStatusView } from '@/lib/order-status';
 import { wooFetch } from '@/lib/server/woo';
 import type { SaegTrackingResponse } from '@/types/saeg';
@@ -19,20 +19,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (!hasWooEnv()) {
-    const statusView = getOrderStatusView({ status: 'processing', paymentMethod: 'cash' });
-    return NextResponse.json({
-      found: true,
-      orderNumber,
-      status: statusView.code,
-      statusLabel: statusView.label,
-      createdAt: new Date().toISOString(),
-      customerPhone: phone,
-      customerName: 'Client AGROPAG',
-      total: 12000,
-      deliveryMode: 'delivery',
-      commune: 'Libreville',
-      timeline: statusView.timeline,
-    } satisfies SaegTrackingResponse);
+    return NextResponse.json(
+      { found: false, message: `WooCommerce indisponible. Variables manquantes: ${missingWooEnvNames().join(', ')}` },
+      { status: 503 },
+    );
   }
 
   try {

@@ -3,7 +3,7 @@
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadAccountProfile, saveAccountProfile } from '@/lib/account-profile';
+import { fetchAccountProfile } from '@/lib/account-profile';
 import { normalizeGabonPhone } from '@/lib/phone';
 
 export function AccountLookupClient() {
@@ -13,10 +13,13 @@ export function AccountLookupClient() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const profile = loadAccountProfile();
-    if (profile?.phone) {
-      setPhone(profile.phone);
-    }
+    fetchAccountProfile()
+      .then((profile) => {
+        if (profile?.phone) {
+          setPhone(profile.phone);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -29,7 +32,6 @@ export function AccountLookupClient() {
     }
 
     setLoading(true);
-    saveAccountProfile({ phone: normalized });
     router.push(`/compte/commandes?phone=${encodeURIComponent(normalized)}`);
   }
 

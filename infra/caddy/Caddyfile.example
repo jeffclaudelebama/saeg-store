@@ -1,5 +1,5 @@
-admin.store.saeggabon.ga {
-  root * /var/www/admin.store.saeggabon.ga/public
+admin.agropag.ga {
+  root * /var/www/admin.agropag.ga/public
   encode zstd gzip
   php_fastcgi unix//run/php/php8.2-fpm.sock
   file_server
@@ -8,7 +8,7 @@ admin.store.saeggabon.ga {
   header @api Cache-Control "no-store"
 }
 
-store.saeggabon.ga {
+boutique.agropag.ga {
   reverse_proxy 127.0.0.1:3000
   encode zstd gzip
 }

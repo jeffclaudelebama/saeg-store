@@ -34,6 +34,24 @@ if (!class_exists('AGROPAG_Weight_Products')) {
         private const MARK_MOBILE_MONEY_PAID_ACTION = 'saeg_mark_mobile_money_paid';
         private const REST_NAMESPACE = 'saeg/v1';
         private const WHATSAPP_LEAD_POST_TYPE = 'saeg_whatsapp_lead';
+        private const CUSTOMER_PROFILE_POST_TYPE = 'saeg_customer_profile';
+        private const OTP_CHALLENGE_POST_TYPE = 'saeg_otp_challenge';
+        private const PROFILE_META_PHONE = '_saeg_phone';
+        private const PROFILE_META_FIRST_NAME = '_saeg_first_name';
+        private const PROFILE_META_LAST_NAME = '_saeg_last_name';
+        private const PROFILE_META_EMAIL = '_saeg_email';
+        private const PROFILE_META_ADDRESS_1 = '_saeg_address_1';
+        private const PROFILE_META_ADDRESS_2 = '_saeg_address_2';
+        private const PROFILE_META_CITY = '_saeg_city';
+        private const OTP_META_PHONE = '_saeg_phone';
+        private const OTP_META_REQUESTED_AT = '_saeg_requested_at';
+        private const OTP_META_EXPIRES_AT = '_saeg_expires_at';
+        private const OTP_META_ATTEMPTS = '_saeg_attempts';
+        private const OTP_META_VERIFIED_AT = '_saeg_verified_at';
+        private const OTP_META_PROVIDER_SID = '_saeg_provider_sid';
+        private const OTP_RESEND_DELAY_SECONDS = 60;
+        private const OTP_TTL_SECONDS = 600;
+        private const OTP_MAX_ATTEMPTS = 5;
         private const CONTACT_PHONE = '011453040';
         private const CONTACT_WHATSAPP = '24177638864';
         private const CONTACT_EMAIL = 'commande@agropag.ga';
@@ -47,6 +65,8 @@ if (!class_exists('AGROPAG_Weight_Products')) {
         public static function activate(): void {
             self::register_supervisor_role();
             self::ensure_woocommerce_defaults();
+            self::register_whatsapp_lead_post_type();
+            self::register_account_post_types();
             flush_rewrite_rules();
         }
 
@@ -60,6 +80,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
             add_action('rest_api_init', [__CLASS__, 'register_rest_routes']);
             add_action('init', [__CLASS__, 'register_meta']);
             add_action('init', [__CLASS__, 'register_whatsapp_lead_post_type']);
+            add_action('init', [__CLASS__, 'register_account_post_types']);
 
             add_action('woocommerce_product_options_general_product_data', [__CLASS__, 'render_general_fields']);
             add_action('woocommerce_product_options_inventory_product_data', [__CLASS__, 'render_inventory_fields']);
@@ -183,6 +204,33 @@ if (!class_exists('AGROPAG_Weight_Products')) {
                     'source' => ['type' => 'string', 'required' => false],
                 ],
                 'callback' => [__CLASS__, 'rest_create_whatsapp_lead'],
+            ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/account/profile', [
+                'methods' => WP_REST_Server::READABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
+                'args' => [
+                    'phone' => ['type' => 'string', 'required' => true],
+                ],
+                'callback' => [__CLASS__, 'rest_get_customer_profile'],
+            ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/account/profile', [
+                'methods' => WP_REST_Server::EDITABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
+                'callback' => [__CLASS__, 'rest_upsert_customer_profile'],
+            ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/account/otp/request', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
+                'callback' => [__CLASS__, 'rest_request_account_otp'],
+            ]);
+
+            register_rest_route(self::REST_NAMESPACE, '/account/otp/verify', [
+                'methods' => WP_REST_Server::CREATABLE,
+                'permission_callback' => [__CLASS__, 'rest_can_manage_orders'],
+                'callback' => [__CLASS__, 'rest_verify_account_otp'],
             ]);
         }
 
@@ -337,6 +385,144 @@ if (!class_exists('AGROPAG_Weight_Products')) {
                 'id' => (int) $post_id,
                 'phone' => $phone,
                 'source' => $source,
+            ]);
+        }
+
+        public static function rest_get_customer_profile(WP_REST_Request $request): WP_REST_Response {
+            $phone = self::normalize_gabon_phone((string) $request->get_param('phone'));
+            if ($phone === null) {
+                return new WP_REST_Response(['error' => 'Téléphone invalide'], 422);
+            }
+
+            return new WP_REST_Response(self::get_customer_profile_payload($phone));
+        }
+
+        public static function rest_upsert_customer_profile(WP_REST_Request $request): WP_REST_Response {
+            $phone = self::normalize_gabon_phone((string) $request->get_param('phone'));
+            if ($phone === null) {
+                return new WP_REST_Response(['error' => 'Téléphone invalide'], 422);
+            }
+
+            $email = sanitize_email((string) $request->get_param('email'));
+            if ($email !== '' && !is_email($email)) {
+                return new WP_REST_Response(['error' => 'Email invalide'], 422);
+            }
+
+            $profile_id = self::find_customer_profile_post_id($phone);
+            if ($profile_id <= 0) {
+                $profile_id = wp_insert_post([
+                    'post_type' => self::CUSTOMER_PROFILE_POST_TYPE,
+                    'post_status' => 'private',
+                    'post_title' => sprintf('Profil client %s', $phone),
+                ], true);
+
+                if (is_wp_error($profile_id)) {
+                    return new WP_REST_Response(['error' => $profile_id->get_error_message()], 500);
+                }
+            }
+
+            update_post_meta($profile_id, self::PROFILE_META_PHONE, $phone);
+            update_post_meta($profile_id, self::PROFILE_META_FIRST_NAME, sanitize_text_field((string) $request->get_param('first_name')));
+            update_post_meta($profile_id, self::PROFILE_META_LAST_NAME, sanitize_text_field((string) $request->get_param('last_name')));
+            update_post_meta($profile_id, self::PROFILE_META_EMAIL, $email);
+            update_post_meta($profile_id, self::PROFILE_META_ADDRESS_1, sanitize_text_field((string) $request->get_param('address_1')));
+            update_post_meta($profile_id, self::PROFILE_META_ADDRESS_2, sanitize_text_field((string) $request->get_param('address_2')));
+            update_post_meta($profile_id, self::PROFILE_META_CITY, sanitize_text_field((string) $request->get_param('city')));
+
+            return new WP_REST_Response(self::get_customer_profile_payload($phone));
+        }
+
+        public static function rest_request_account_otp(WP_REST_Request $request): WP_REST_Response {
+            $phone = self::normalize_gabon_phone((string) $request->get_param('phone'));
+            if ($phone === null) {
+                return new WP_REST_Response(['error' => 'Téléphone invalide'], 422);
+            }
+
+            $challenge_id = self::find_otp_challenge_post_id($phone);
+            $requested_at = $challenge_id > 0 ? (int) get_post_meta($challenge_id, self::OTP_META_REQUESTED_AT, true) : 0;
+            $seconds_since_last = $requested_at > 0 ? (time() - $requested_at) : PHP_INT_MAX;
+            if ($challenge_id > 0 && $seconds_since_last < self::OTP_RESEND_DELAY_SECONDS) {
+                return new WP_REST_Response([
+                    'error' => 'Veuillez patienter avant de demander un nouveau code.',
+                    'resend_after' => self::OTP_RESEND_DELAY_SECONDS - $seconds_since_last,
+                ], 429);
+            }
+
+            $provider = self::get_otp_provider_config();
+            if ($provider === null) {
+                return new WP_REST_Response(['error' => 'Provider OTP non configuré'], 500);
+            }
+
+            $provider_result = self::send_otp_via_twilio_verify($phone, $provider);
+            if (is_wp_error($provider_result)) {
+                return new WP_REST_Response(['error' => $provider_result->get_error_message()], 502);
+            }
+
+            if ($challenge_id <= 0) {
+                $challenge_id = wp_insert_post([
+                    'post_type' => self::OTP_CHALLENGE_POST_TYPE,
+                    'post_status' => 'private',
+                    'post_title' => sprintf('OTP %s', $phone),
+                ], true);
+
+                if (is_wp_error($challenge_id)) {
+                    return new WP_REST_Response(['error' => $challenge_id->get_error_message()], 500);
+                }
+            }
+
+            update_post_meta($challenge_id, self::OTP_META_PHONE, $phone);
+            update_post_meta($challenge_id, self::OTP_META_REQUESTED_AT, time());
+            update_post_meta($challenge_id, self::OTP_META_EXPIRES_AT, time() + self::OTP_TTL_SECONDS);
+            update_post_meta($challenge_id, self::OTP_META_ATTEMPTS, 0);
+            update_post_meta($challenge_id, self::OTP_META_VERIFIED_AT, 0);
+            update_post_meta($challenge_id, self::OTP_META_PROVIDER_SID, sanitize_text_field((string) ($provider_result['sid'] ?? '')));
+
+            return new WP_REST_Response([
+                'ok' => true,
+                'phone' => $phone,
+                'expires_in' => self::OTP_TTL_SECONDS,
+                'resend_after' => self::OTP_RESEND_DELAY_SECONDS,
+            ]);
+        }
+
+        public static function rest_verify_account_otp(WP_REST_Request $request): WP_REST_Response {
+            $phone = self::normalize_gabon_phone((string) $request->get_param('phone'));
+            $code = preg_replace('/\D+/', '', (string) $request->get_param('code'));
+            if ($phone === null || !is_string($code) || strlen($code) !== 6) {
+                return new WP_REST_Response(['error' => 'Code OTP invalide'], 422);
+            }
+
+            $challenge_id = self::find_otp_challenge_post_id($phone);
+            if ($challenge_id <= 0) {
+                return new WP_REST_Response(['error' => 'Aucun code en attente pour ce numéro'], 404);
+            }
+
+            $expires_at = (int) get_post_meta($challenge_id, self::OTP_META_EXPIRES_AT, true);
+            if ($expires_at <= 0 || $expires_at < time()) {
+                return new WP_REST_Response(['error' => 'Le code OTP a expiré'], 410);
+            }
+
+            $attempts = (int) get_post_meta($challenge_id, self::OTP_META_ATTEMPTS, true);
+            if ($attempts >= self::OTP_MAX_ATTEMPTS) {
+                return new WP_REST_Response(['error' => 'Trop de tentatives, veuillez demander un nouveau code'], 429);
+            }
+
+            $provider = self::get_otp_provider_config();
+            if ($provider === null) {
+                return new WP_REST_Response(['error' => 'Provider OTP non configuré'], 500);
+            }
+
+            $verification = self::verify_otp_via_twilio_verify($phone, $code, $provider);
+            if (is_wp_error($verification)) {
+                update_post_meta($challenge_id, self::OTP_META_ATTEMPTS, $attempts + 1);
+                return new WP_REST_Response(['error' => $verification->get_error_message()], 401);
+            }
+
+            update_post_meta($challenge_id, self::OTP_META_VERIFIED_AT, time());
+
+            return new WP_REST_Response([
+                'ok' => true,
+                'profile' => self::get_customer_profile_payload($phone),
             ]);
         }
 
@@ -1486,6 +1672,194 @@ if (!class_exists('AGROPAG_Weight_Products')) {
                 'capability_type' => 'post',
                 'map_meta_cap' => true,
             ]);
+        }
+
+        private static function register_account_post_types(): void {
+            register_post_type(self::CUSTOMER_PROFILE_POST_TYPE, [
+                'labels' => [
+                    'name' => __('Profils clients AGROPAG', 'saeg-weight-products'),
+                    'singular_name' => __('Profil client AGROPAG', 'saeg-weight-products'),
+                ],
+                'public' => false,
+                'show_ui' => false,
+                'show_in_menu' => false,
+                'supports' => ['title'],
+                'capability_type' => 'post',
+                'map_meta_cap' => true,
+            ]);
+
+            register_post_type(self::OTP_CHALLENGE_POST_TYPE, [
+                'labels' => [
+                    'name' => __('OTP AGROPAG', 'saeg-weight-products'),
+                    'singular_name' => __('OTP AGROPAG', 'saeg-weight-products'),
+                ],
+                'public' => false,
+                'show_ui' => false,
+                'show_in_menu' => false,
+                'supports' => ['title'],
+                'capability_type' => 'post',
+                'map_meta_cap' => true,
+            ]);
+        }
+
+        private static function find_customer_profile_post_id(string $phone): int {
+            $query = new WP_Query([
+                'post_type' => self::CUSTOMER_PROFILE_POST_TYPE,
+                'post_status' => 'private',
+                'posts_per_page' => 1,
+                'fields' => 'ids',
+                'meta_query' => [
+                    [
+                        'key' => self::PROFILE_META_PHONE,
+                        'value' => $phone,
+                    ],
+                ],
+            ]);
+
+            return isset($query->posts[0]) ? (int) $query->posts[0] : 0;
+        }
+
+        private static function get_customer_profile_payload(string $phone): array {
+            $profile_id = self::find_customer_profile_post_id($phone);
+            if ($profile_id <= 0) {
+                return [
+                    'phone' => $phone,
+                    'first_name' => '',
+                    'last_name' => '',
+                    'email' => '',
+                    'address_1' => '',
+                    'address_2' => '',
+                    'city' => 'Libreville',
+                ];
+            }
+
+            return [
+                'phone' => $phone,
+                'first_name' => (string) get_post_meta($profile_id, self::PROFILE_META_FIRST_NAME, true),
+                'last_name' => (string) get_post_meta($profile_id, self::PROFILE_META_LAST_NAME, true),
+                'email' => (string) get_post_meta($profile_id, self::PROFILE_META_EMAIL, true),
+                'address_1' => (string) get_post_meta($profile_id, self::PROFILE_META_ADDRESS_1, true),
+                'address_2' => (string) get_post_meta($profile_id, self::PROFILE_META_ADDRESS_2, true),
+                'city' => (string) get_post_meta($profile_id, self::PROFILE_META_CITY, true) ?: 'Libreville',
+            ];
+        }
+
+        private static function find_otp_challenge_post_id(string $phone): int {
+            $query = new WP_Query([
+                'post_type' => self::OTP_CHALLENGE_POST_TYPE,
+                'post_status' => 'private',
+                'posts_per_page' => 1,
+                'fields' => 'ids',
+                'meta_query' => [
+                    [
+                        'key' => self::OTP_META_PHONE,
+                        'value' => $phone,
+                    ],
+                ],
+            ]);
+
+            return isset($query->posts[0]) ? (int) $query->posts[0] : 0;
+        }
+
+        private static function get_otp_provider_config(): ?array {
+            $account_sid = getenv('TWILIO_ACCOUNT_SID');
+            $auth_token = getenv('TWILIO_AUTH_TOKEN');
+            $service_sid = getenv('TWILIO_VERIFY_SERVICE_SID');
+            $channel = getenv('AGROPAG_OTP_CHANNEL');
+
+            if (defined('TWILIO_ACCOUNT_SID') && (!$account_sid || $account_sid === '')) {
+                $account_sid = (string) constant('TWILIO_ACCOUNT_SID');
+            }
+            if (defined('TWILIO_AUTH_TOKEN') && (!$auth_token || $auth_token === '')) {
+                $auth_token = (string) constant('TWILIO_AUTH_TOKEN');
+            }
+            if (defined('TWILIO_VERIFY_SERVICE_SID') && (!$service_sid || $service_sid === '')) {
+                $service_sid = (string) constant('TWILIO_VERIFY_SERVICE_SID');
+            }
+            if (defined('AGROPAG_OTP_CHANNEL') && (!$channel || $channel === '')) {
+                $channel = (string) constant('AGROPAG_OTP_CHANNEL');
+            }
+
+            if (!is_string($account_sid) || !is_string($auth_token) || !is_string($service_sid) || $account_sid === '' || $auth_token === '' || $service_sid === '') {
+                return null;
+            }
+
+            return [
+                'account_sid' => $account_sid,
+                'auth_token' => $auth_token,
+                'service_sid' => $service_sid,
+                'channel' => is_string($channel) && $channel !== '' ? $channel : 'sms',
+            ];
+        }
+
+        private static function to_e164_phone(string $phone): string {
+            return '+' . ltrim($phone, '+');
+        }
+
+        private static function send_otp_via_twilio_verify(string $phone, array $provider) {
+            $endpoint = sprintf(
+                'https://verify.twilio.com/v2/Services/%s/Verifications',
+                rawurlencode((string) $provider['service_sid'])
+            );
+
+            $response = wp_remote_post($endpoint, [
+                'timeout' => 20,
+                'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode((string) $provider['account_sid'] . ':' . (string) $provider['auth_token']),
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                ],
+                'body' => [
+                    'To' => self::to_e164_phone($phone),
+                    'Channel' => (string) $provider['channel'],
+                ],
+            ]);
+
+            if (is_wp_error($response)) {
+                return $response;
+            }
+
+            $code = (int) wp_remote_retrieve_response_code($response);
+            $body = json_decode((string) wp_remote_retrieve_body($response), true);
+            if ($code >= 400) {
+                return new WP_Error('saeg_otp_send_failed', isset($body['message']) ? (string) $body['message'] : 'Échec envoi OTP');
+            }
+
+            return is_array($body) ? $body : [];
+        }
+
+        private static function verify_otp_via_twilio_verify(string $phone, string $code, array $provider) {
+            $endpoint = sprintf(
+                'https://verify.twilio.com/v2/Services/%s/VerificationCheck',
+                rawurlencode((string) $provider['service_sid'])
+            );
+
+            $response = wp_remote_post($endpoint, [
+                'timeout' => 20,
+                'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode((string) $provider['account_sid'] . ':' . (string) $provider['auth_token']),
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                ],
+                'body' => [
+                    'To' => self::to_e164_phone($phone),
+                    'Code' => $code,
+                ],
+            ]);
+
+            if (is_wp_error($response)) {
+                return $response;
+            }
+
+            $http_code = (int) wp_remote_retrieve_response_code($response);
+            $body = json_decode((string) wp_remote_retrieve_body($response), true);
+            if ($http_code >= 400) {
+                return new WP_Error('saeg_otp_verify_failed', isset($body['message']) ? (string) $body['message'] : 'Code OTP invalide');
+            }
+
+            if (!is_array($body) || (($body['status'] ?? '') !== 'approved' && ($body['valid'] ?? false) !== true)) {
+                return new WP_Error('saeg_otp_invalid', 'Code OTP invalide');
+            }
+
+            return $body;
         }
 
         private static function get_whatsapp_leads_token(): string {

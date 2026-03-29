@@ -7,8 +7,6 @@ const PRODUCT_FALLBACK_IMAGE = '/img/placeholder-produit.png';
 const PRODUCTION_MEDIA_HOSTS = new Set([
   'admin.agropag.ga',
   'boutique.agropag.ga',
-  'admin.store.saeggabon.ga',
-  'store.saeggabon.ga',
 ]);
 const BLOCKED_PLACEHOLDER_HOSTS = new Set(['via.placeholder.com', 'placehold.co', 'dummyimage.com']);
 const WOO_PAGE_SIZE = 100;

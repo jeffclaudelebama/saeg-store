@@ -1,4 +1,4 @@
-import { env, hasWooEnv } from '@/lib/env';
+import { env, hasWooEnv, missingWooEnvNames } from '@/lib/env';
 import { REVALIDATE_PRODUCTS_SECONDS } from '@/lib/constants';
 
 const AGROPAG_BACKEND_USER_AGENT =
@@ -33,7 +33,7 @@ export function createBackendHeaders(init?: HeadersInit): Headers {
 
 export async function wooFetch<T>(path: string, init: RequestInit & { revalidate?: number } = {}): Promise<T> {
   if (!hasWooEnv()) {
-    throw new WooUnavailableError('Variables WooCommerce manquantes');
+    throw new WooUnavailableError(`Variables WooCommerce manquantes: ${missingWooEnvNames().join(', ')}`);
   }
 
   const { revalidate = REVALIDATE_PRODUCTS_SECONDS, headers, cache: requestedCache, ...rest } = init;

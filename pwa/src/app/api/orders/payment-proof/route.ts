@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { hasWooEnv } from '@/lib/env';
+import { hasWooEnv, missingWooEnvNames } from '@/lib/env';
 import { normalizeGabonPhone } from '@/lib/phone';
+import { getAccountSession } from '@/lib/server/account-session';
 import { wooFetch } from '@/lib/server/woo';
 
 function toStringValue(value: FormDataEntryValue | null): string {
@@ -24,12 +25,13 @@ function metaValue(meta: Array<{ key?: string; value?: unknown }> | undefined, k
 
 export async function POST(request: Request) {
   if (!hasWooEnv()) {
-    return NextResponse.json({ error: 'WooCommerce indisponible.' }, { status: 503 });
+    return NextResponse.json({ error: `WooCommerce indisponible. Variables manquantes: ${missingWooEnvNames().join(', ')}` }, { status: 503 });
   }
 
+  const session = await getAccountSession();
   const formData = await request.formData();
   const orderId = Number(toStringValue(formData.get('orderId')));
-  const phone = normalizeGabonPhone(toStringValue(formData.get('phone')));
+  const phone = normalizeGabonPhone(toStringValue(formData.get('phone')) || session?.phone || '');
   const paymentReferenceFromBody = toStringValue(formData.get('paymentReference'));
   const payerNumberFromBody = normalizeGabonPhone(toStringValue(formData.get('payerNumber'))) || '';
   const proof = formData.get('proof');

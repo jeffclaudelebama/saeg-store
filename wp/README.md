@@ -33,7 +33,7 @@ Le plugin AGROPAG crée un rôle `saeg_superviseur` pouvant :
 ## CORS / sécurité headless
 
 Copier `mu-plugins/saeg-headless-security.php` dans `wp-content/mu-plugins/` pour :
-- autoriser uniquement `https://store.saeggabon.ga`
+- autoriser uniquement `https://boutique.agropag.ga`
 - restreindre l'en-tête CORS REST
 - désactiver XML-RPC
 - réduire exposition de la version WP

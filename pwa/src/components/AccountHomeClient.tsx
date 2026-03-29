@@ -4,8 +4,8 @@ import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { clearAccountProfile, loadAccountProfile, saveAccountProfile, type SaegAccountProfile } from '@/lib/account-profile';
-import { clearAccountSession, loadAccountSession, type SaegAccountSession } from '@/lib/account-session';
+import { clearAccountProfile, fetchAccountProfile, type SaegAccountProfile } from '@/lib/account-profile';
+import { clearAccountSession, type SaegAccountSession } from '@/lib/account-session';
 import { normalizeGabonPhone } from '@/lib/phone';
 
 export function AccountHomeClient() {
@@ -14,19 +14,22 @@ export function AccountHomeClient() {
   const [session, setSession] = useState<SaegAccountSession | null>(null);
   const [phoneInput, setPhoneInput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const savedProfile = loadAccountProfile();
-    const savedSession = loadAccountSession();
-    setProfile(savedProfile);
-    setSession(savedSession);
-    setPhoneInput(savedProfile?.phone || '');
-    if (!savedProfile?.phone && savedSession?.phone) {
-      setPhoneInput(savedSession.phone);
-    }
+    fetchAccountProfile()
+      .then((savedProfile) => {
+        setProfile(savedProfile);
+        setSession(savedProfile?.phone ? { phone: savedProfile.phone } : null);
+        setPhoneInput(savedProfile?.phone || '');
+      })
+      .catch(() => {
+        setProfile(null);
+        setSession(null);
+      });
   }, []);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const normalized = normalizeGabonPhone(phoneInput);
@@ -34,27 +37,36 @@ export function AccountHomeClient() {
       setError('Numéro invalide. Formats acceptés: 077..., 06..., 241..., +241...');
       return;
     }
-    saveAccountProfile({
-      phone: normalized,
-      first_name: profile?.first_name,
-      last_name: profile?.last_name,
-      email: profile?.email,
-      address_1: profile?.address_1,
-      address_2: profile?.address_2,
-      city: profile?.city,
-    });
-    router.push(`/compte/otp?phone=${encodeURIComponent(normalized)}`);
+
+    setSubmitting(true);
+    try {
+      const response = await fetch('/api/account/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalized }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Impossible d’envoyer le code OTP.');
+      }
+      router.push(`/compte/otp?phone=${encodeURIComponent(normalized)}`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Impossible d’envoyer le code OTP.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  function onLogout() {
-    clearAccountSession();
+  async function onLogout() {
+    await clearAccountSession();
     setSession(null);
-    setProfile(loadAccountProfile());
+    setProfile(null);
+    setPhoneInput('');
   }
 
-  function onResetPhone() {
-    clearAccountSession();
-    clearAccountProfile();
+  async function onResetPhone() {
+    await clearAccountSession();
+    await clearAccountProfile();
     setSession(null);
     setProfile(null);
     setPhoneInput('');
@@ -75,7 +87,7 @@ export function AccountHomeClient() {
             <Link href="/compte/profil" className="btn btn-primary w-full">
               Mon profil
             </Link>
-            <Link href={`/compte/commandes?phone=${encodeURIComponent(accountPhone)}`} className="btn btn-ghost w-full">
+            <Link href={{ pathname: '/compte/commandes', query: { phone: accountPhone } }} className="btn btn-ghost w-full">
               Mes commandes
             </Link>
           </div>
@@ -108,7 +120,7 @@ export function AccountHomeClient() {
           />
         </label>
         <button className="btn btn-primary w-full" type="submit">
-          Recevoir mon code
+          {submitting ? 'Envoi...' : 'Recevoir mon code'}
         </button>
         {error ? <p className="text-sm font-semibold text-red-600">{error}</p> : null}
       </form>

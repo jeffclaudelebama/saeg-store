@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { loadAccountProfile, saveAccountProfile } from '@/lib/account-profile';
-import { loadAccountSession } from '@/lib/account-session';
+import { fetchAccountProfile } from '@/lib/account-profile';
 import { formatCurrency, formatLibrevilleDate } from '@/lib/format';
 import { normalizeGabonPhone } from '@/lib/phone';
 import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
@@ -18,34 +17,24 @@ export function AccountOrdersClient() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const profile = loadAccountProfile();
-    const session = loadAccountSession();
-    const preferred = phoneFromQuery || profile?.phone || session?.phone || '';
-    const normalized = normalizeGabonPhone(preferred);
-    if (!normalized) {
-      setLoading(false);
-      setError('Téléphone invalide. Retournez à la page Compte.');
-      return;
-    }
-
-    setPhone(normalized);
-    saveAccountProfile({
-      phone: normalized,
-      first_name: profile?.first_name,
-      last_name: profile?.last_name,
-      address_1: profile?.address_1,
-      city: profile?.city,
-    });
-
-    setLoading(true);
-    setError(null);
-    fetch(`/api/orders?phone=${encodeURIComponent(normalized)}`, { cache: 'no-store' })
-      .then(async (response) => {
-        const payload = (await response.json()) as SaegOrdersResponse & { error?: string };
-        if (!response.ok) {
-          throw new Error(payload.error || 'Impossible de charger les commandes.');
+    fetchAccountProfile()
+      .catch(() => null)
+      .then((profile) => {
+        const preferred = phoneFromQuery || profile?.phone || '';
+        const normalized = normalizeGabonPhone(preferred);
+        if (!normalized && !phoneFromQuery) {
+          throw new Error('Aucune session compte active. Reconnectez-vous pour voir vos commandes.');
         }
-        setItems(Array.isArray(payload.items) ? payload.items : []);
+
+        const query = normalized ? `?phone=${encodeURIComponent(normalized)}` : '';
+        return fetch(`/api/orders${query}`, { cache: 'no-store' }).then(async (response) => {
+          const payload = (await response.json()) as SaegOrdersResponse & { error?: string };
+          if (!response.ok) {
+            throw new Error(payload.error || 'Impossible de charger les commandes.');
+          }
+          setPhone(payload.phone || normalized || '');
+          setItems(Array.isArray(payload.items) ? payload.items : []);
+        });
       })
       .catch((cause) => {
         setError(cause instanceof Error ? cause.message : 'Erreur de chargement.');
@@ -111,7 +100,7 @@ export function AccountOrdersClient() {
             ))}
           </ul>
 
-          <Link href={`/compte/commandes/${order.id}?phone=${encodeURIComponent(phone)}`} className="btn btn-ghost w-full">
+          <Link href={{ pathname: `/compte/commandes/${order.id}`, query: { phone } }} className="btn btn-ghost w-full">
             Voir le détail
           </Link>
         </article>

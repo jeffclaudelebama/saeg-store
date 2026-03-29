@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { loadAccountProfile } from '@/lib/account-profile';
-import { loadAccountSession } from '@/lib/account-session';
+import { fetchAccountProfile } from '@/lib/account-profile';
 import { formatCurrency, formatLibrevilleDate } from '@/lib/format';
 import { normalizeGabonPhone } from '@/lib/phone';
 import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
@@ -12,56 +11,49 @@ import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
 export function AccountOrderDetailClient({ orderId }: { orderId: string }) {
   const searchParams = useSearchParams();
   const phoneFromQuery = useMemo(() => String(searchParams.get('phone') || '').trim(), [searchParams]);
-  const phoneFromProfile = useMemo(() => loadAccountProfile()?.phone || '', []);
-  const phoneFromSession = useMemo(() => loadAccountSession()?.phone || '', []);
   const [item, setItem] = useState<SaegOrderListItem | null>(null);
+  const [resolvedPhone, setResolvedPhone] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const normalizedPhone =
-      normalizeGabonPhone(phoneFromQuery) ||
-      normalizeGabonPhone(phoneFromProfile) ||
-      normalizeGabonPhone(phoneFromSession);
-    if (!normalizedPhone) {
-      setError('Téléphone invalide.');
-      setLoading(false);
-      return;
-    }
+    fetchAccountProfile()
+      .catch(() => null)
+      .then((profile) => {
+        const normalizedPhone = normalizeGabonPhone(phoneFromQuery) || normalizeGabonPhone(profile?.phone || '');
+        const query = normalizedPhone
+          ? `?phone=${encodeURIComponent(normalizedPhone)}&id=${encodeURIComponent(orderId)}`
+          : `?id=${encodeURIComponent(orderId)}`;
 
-    setLoading(true);
-    setError(null);
-    fetch(`/api/orders?phone=${encodeURIComponent(normalizedPhone)}&id=${encodeURIComponent(orderId)}`, { cache: 'no-store' })
-      .then(async (response) => {
-        const payload = (await response.json()) as SaegOrdersResponse & { error?: string };
-        if (!response.ok) {
-          throw new Error(payload.error || 'Commande introuvable.');
-        }
-        setItem(payload.items[0] || null);
+        return fetch(`/api/orders${query}`, { cache: 'no-store' }).then(async (response) => {
+          const payload = (await response.json()) as SaegOrdersResponse & { error?: string };
+          if (!response.ok) {
+            throw new Error(payload.error || 'Commande introuvable.');
+          }
+          setResolvedPhone(payload.phone || normalizedPhone || '');
+          setItem(payload.items[0] || null);
+        });
       })
       .catch((cause) => {
         setError(cause instanceof Error ? cause.message : 'Erreur de chargement.');
       })
       .finally(() => setLoading(false));
-  }, [orderId, phoneFromProfile, phoneFromQuery, phoneFromSession]);
+  }, [orderId, phoneFromQuery]);
 
   if (loading) {
     return <div className="animate-pulse rounded-xl border border-slate-200 bg-white p-6">Chargement du détail commande...</div>;
   }
 
   if (error || !item) {
-    const fallbackPhone = phoneFromQuery || phoneFromProfile || phoneFromSession;
     return (
       <div className="space-y-4">
         <div className="rounded-xl border border-red-200 bg-red-50 p-5">
           <p className="text-sm font-semibold text-red-700">{error || 'Commande introuvable.'}</p>
         </div>
-        <Link href={`/compte/commandes?phone=${encodeURIComponent(fallbackPhone)}`} className="btn btn-ghost">Retour commandes</Link>
+        <Link href={resolvedPhone ? { pathname: '/compte/commandes', query: { phone: resolvedPhone } } : '/compte/commandes'} className="btn btn-ghost">Retour commandes</Link>
       </div>
     );
   }
-
-  const fallbackPhone = phoneFromQuery || phoneFromProfile || phoneFromSession;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
@@ -102,7 +94,7 @@ export function AccountOrderDetailClient({ orderId }: { orderId: string }) {
       </div>
 
       <div className="flex gap-3">
-        <Link href={`/compte/commandes?phone=${encodeURIComponent(fallbackPhone)}`} className="btn btn-ghost">Retour commandes</Link>
+        <Link href={resolvedPhone ? { pathname: '/compte/commandes', query: { phone: resolvedPhone } } : '/compte/commandes'} className="btn btn-ghost">Retour commandes</Link>
         <Link href="/catalogue" className="btn btn-primary">Retour boutique</Link>
       </div>
     </div>

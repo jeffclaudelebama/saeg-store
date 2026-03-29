@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { hasWooEnv } from '@/lib/env';
 import { normalizeGabonPhone } from '@/lib/phone';
+import { getAccountSession } from '@/lib/server/account-session';
 import { wooFetch } from '@/lib/server/woo';
 
 type PushSubscriptionPayload = {
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'WooCommerce indisponible.' }, { status: 503 });
   }
 
+  const session = await getAccountSession();
   const body = (await request.json().catch(() => null)) as {
     orderId?: number | string;
     phone?: string;
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
   } | null;
 
   const orderId = Number(body?.orderId);
-  const phone = normalizeGabonPhone(String(body?.phone || ''));
+  const phone = normalizeGabonPhone(String(body?.phone || session?.phone || ''));
   const subscription = body?.subscription;
 
   if (!Number.isFinite(orderId) || orderId <= 0) {

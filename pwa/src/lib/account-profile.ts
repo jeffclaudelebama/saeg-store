@@ -1,8 +1,5 @@
 import type { SaegCommune } from '@/types/saeg';
 
-const PROFILE_STORAGE_KEY = 'saeg_account_profile_v1';
-const PROFILE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 export type SaegAccountProfile = {
   phone: string;
   first_name?: string;
@@ -13,50 +10,44 @@ export type SaegAccountProfile = {
   city?: SaegCommune;
 };
 
-export function loadAccountProfile(): SaegAccountProfile | null {
-  if (typeof window === 'undefined') {
+export async function fetchAccountProfile(): Promise<SaegAccountProfile | null> {
+  const response = await fetch('/api/account/profile', {
+    method: 'GET',
+    cache: 'no-store',
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
     return null;
   }
 
-  const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
-  if (!raw) {
-    return null;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Impossible de récupérer le profil.');
   }
 
-  try {
-    const parsed = JSON.parse(raw) as { updatedAt?: number; profile?: SaegAccountProfile };
-    if (!parsed?.updatedAt || !parsed.profile) {
-      window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-      return null;
-    }
-
-    if (Date.now() - parsed.updatedAt > PROFILE_TTL_MS) {
-      window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-      return null;
-    }
-
-    return parsed.profile;
-  } catch {
-    window.localStorage.removeItem(PROFILE_STORAGE_KEY);
-    return null;
-  }
+  return (payload?.profile || null) as SaegAccountProfile | null;
 }
 
-export function saveAccountProfile(profile: SaegAccountProfile): void {
-  if (typeof window === 'undefined') {
-    return;
+export async function saveAccountProfile(profile: SaegAccountProfile): Promise<SaegAccountProfile> {
+  const response = await fetch('/api/account/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(profile),
+    credentials: 'include',
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Impossible d’enregistrer le profil.');
   }
 
-  const payload = {
-    updatedAt: Date.now(),
-    profile,
-  };
-  window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(payload));
+  return payload.profile as SaegAccountProfile;
 }
 
-export function clearAccountProfile(): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-  window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+export async function clearAccountProfile(): Promise<void> {
+  await fetch('/api/account/session', {
+    method: 'DELETE',
+    credentials: 'include',
+  });
 }

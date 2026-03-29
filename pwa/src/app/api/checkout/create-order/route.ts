@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { validateCartAgainstProducts } from '@/lib/cart-validation';
-import { env, hasWooEnv } from '@/lib/env';
+import { env, hasWooEnv, missingWooEnvNames } from '@/lib/env';
 import { normalizeGabonPhone } from '@/lib/phone';
 import { getProductServer } from '@/lib/server/products';
 import { createBackendHeaders, wooFetch } from '@/lib/server/woo';
@@ -316,22 +316,10 @@ export async function POST(request: Request) {
   };
 
   if (!hasWooEnv()) {
-    const fakeId = Math.floor(Date.now() / 1000);
-    const paymentReference = form.paiement === 'mobile_money' ? buildMobileMoneyReference(fakeId) : '';
-    return NextResponse.json({
-      ok: true,
-      mock: true,
-      order: {
-        id: fakeId,
-        number: String(fakeId),
-        status: form.paiement === 'mobile_money' ? 'on-hold' : 'pending',
-        total: validation.total,
-        currency: 'XAF',
-        created_at: new Date().toISOString(),
-      },
-      paymentReference,
-      validation,
-    });
+    return NextResponse.json(
+      { error: `WooCommerce indisponible. Variables manquantes: ${missingWooEnvNames().join(', ')}` },
+      { status: 503 },
+    );
   }
 
   try {
