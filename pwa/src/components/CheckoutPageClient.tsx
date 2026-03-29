@@ -98,7 +98,6 @@ export function CheckoutPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [cartValidationErrors, setCartValidationErrors] = useState<SaegCartValidationError[]>([]);
-  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [mobileMoneySeed] = useState(() => Math.random().toString(36).slice(-4).toUpperCase());
 
   const queryCommune = searchParams.get('commune');
@@ -222,8 +221,8 @@ export function CheckoutPageClient() {
       return true;
     }
     const payer = normalizeGabonPhone(form.mobileMoneyPayerNumber || '');
-    return Boolean(payer) && Boolean(paymentProofFile);
-  }, [items.length, form, paymentProofFile]);
+    return Boolean(payer);
+  }, [items.length, form]);
 
   async function submitOrder() {
     setError(null);
@@ -243,10 +242,6 @@ export function CheckoutPageClient() {
       if (!normalizedPayer) {
         setFieldErrors((prev) => ({ ...prev, mobileMoneyPayerNumber: 'Numéro payeur invalide.' }));
         setError('Le numéro Airtel/Moov du payeur est obligatoire.');
-        return;
-      }
-      if (!paymentProofFile) {
-        setError('La preuve de paiement est obligatoire pour Mobile Money.');
         return;
       }
       next.mobileMoneyPayerNumber = normalizedPayer;
@@ -286,9 +281,6 @@ export function CheckoutPageClient() {
         const payload = new FormData();
         payload.append('items', JSON.stringify(items));
         payload.append('form', JSON.stringify(next));
-        if (paymentProofFile) {
-          payload.append('payment_proof', paymentProofFile);
-        }
 
         const res = await fetch('/api/checkout/create-order', {
           method: 'POST',
@@ -311,7 +303,7 @@ export function CheckoutPageClient() {
           window.localStorage.removeItem(CHECKOUT_STORAGE_KEY);
         }
         router.push(
-          `/confirmation?orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(next.paiement)}&paymentRef=${encodeURIComponent(String(data.paymentReference || ''))}`
+          `/confirmation?orderId=${encodeURIComponent(String(order.id || order.number || ''))}&orderNumber=${encodeURIComponent(String(order.number || order.id))}&total=${encodeURIComponent(String(data.validation?.total ?? total))}&payment=${encodeURIComponent(next.paiement)}&paymentRef=${encodeURIComponent(String(data.paymentReference || ''))}&phone=${encodeURIComponent(next.telephone)}&payerPhone=${encodeURIComponent(String(next.mobileMoneyPayerNumber || ''))}`
         );
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Erreur de confirmation');
@@ -454,7 +446,7 @@ export function CheckoutPageClient() {
                   </p>
                   <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : AGROPAG</p>
                   <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : AGROPAG (bientôt disponible)</p>
-                  <p className="mt-3 text-xs text-slate-600">Effectuez le paiement, puis ajoutez la preuve.</p>
+                  <p className="mt-3 text-xs text-slate-600">La preuve de paiement sera demandée après création de la commande. Nous ne la demandons plus à cette étape.</p>
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <label className="space-y-2">
                       <span className="text-sm font-semibold text-slate-700">Numéro Airtel/Moov du payeur *</span>
@@ -465,18 +457,6 @@ export function CheckoutPageClient() {
                         placeholder="Ex: 077 00 00 00"
                       />
                       {fieldErrors.mobileMoneyPayerNumber ? <p className="mt-1 text-xs text-red-600">{fieldErrors.mobileMoneyPayerNumber}</p> : null}
-                    </label>
-                    <label className="space-y-2">
-                      <span className="text-sm font-semibold text-slate-700">Preuve de paiement (image/pdf) *</span>
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={(e) => setPaymentProofFile(e.target.files?.[0] ?? null)}
-                        className="w-full rounded border-slate-200 bg-white text-sm file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-xs file:font-bold file:text-primary"
-                      />
-                      {paymentProofFile ? (
-                        <p className="text-xs text-slate-500">Fichier: {paymentProofFile.name}</p>
-                      ) : null}
                     </label>
                   </div>
                 </div>

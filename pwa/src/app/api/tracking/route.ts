@@ -1,32 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasWooEnv } from '@/lib/env';
+import { getOrderMetaSummary, getOrderStatusView } from '@/lib/order-status';
 import { wooFetch } from '@/lib/server/woo';
 import type { SaegTrackingResponse } from '@/types/saeg';
-
-function mapStatus(status: string): NonNullable<SaegTrackingResponse['status']> {
-  switch (status) {
-    case 'completed':
-      return 'livree';
-    case 'processing':
-      return 'preparation';
-    case 'saeg_en_route':
-      return 'en_route';
-    default:
-      return 'recue';
-  }
-}
-
-function makeTimeline(status: NonNullable<SaegTrackingResponse['status']>) {
-  const order = ['recue', 'preparation', 'en_route', 'livree'] as const;
-  const labels: Record<(typeof order)[number], string> = {
-    recue: 'Reçue',
-    preparation: 'Préparation',
-    en_route: 'En route',
-    livree: 'Livrée',
-  };
-  const index = order.indexOf(status);
-  return order.map((code, idx) => ({ code, label: labels[code], done: idx <= index }));
-}
 
 function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D+/g, '');
@@ -43,19 +19,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (!hasWooEnv()) {
-    const status: SaegTrackingResponse['status'] = 'preparation';
+    const statusView = getOrderStatusView({ status: 'processing', paymentMethod: 'cash' });
     return NextResponse.json({
       found: true,
       orderNumber,
-      status,
-      statusLabel: 'Préparation',
+      status: statusView.code,
+      statusLabel: statusView.label,
       createdAt: new Date().toISOString(),
       customerPhone: phone,
       customerName: 'Client AGROPAG',
       total: 12000,
       deliveryMode: 'delivery',
       commune: 'Libreville',
-      timeline: makeTimeline(status),
+      timeline: statusView.timeline,
     } satisfies SaegTrackingResponse);
   }
 
@@ -73,26 +49,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ found: false, message: 'Commande introuvable pour ce téléphone.' }, { status: 404 });
     }
 
-    const status = mapStatus(order.status || 'pending');
-    const statusLabels: Record<NonNullable<SaegTrackingResponse['status']>, string> = {
-      recue: 'Reçue',
-      preparation: 'Préparation',
-      en_route: 'En route',
-      livree: 'Livrée',
-    };
+    const meta = getOrderMetaSummary(order.meta_data);
+    const statusView = getOrderStatusView({
+      status: order.status || 'pending',
+      paymentMethod: meta.paymentMethod,
+      mobileMoneyStatus: meta.mobileMoneyStatus,
+    });
 
     const response: SaegTrackingResponse = {
       found: true,
       orderNumber: String(order.number || order.id),
-      status,
-      statusLabel: statusLabels[status],
+      status: statusView.code,
+      statusLabel: statusView.label,
       createdAt: order.date_created,
       customerPhone: order.billing?.phone,
       customerName: [order.billing?.first_name, order.billing?.last_name].filter(Boolean).join(' '),
       total: Number(order.total || 0),
       deliveryMode: ((order.meta_data ?? []).find((m: any) => m.key === 'saeg_mode_livraison')?.value ?? 'delivery') as any,
       commune: (order.meta_data ?? []).find((m: any) => m.key === 'saeg_commune')?.value ?? order.shipping?.city ?? '',
-      timeline: makeTimeline(status),
+      timeline: statusView.timeline,
     };
 
     return NextResponse.json(response);

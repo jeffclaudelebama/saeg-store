@@ -1,14 +1,18 @@
 import Link from 'next/link';
 import { MarketingScaffold } from '@/components/MarketingScaffold';
+import { OrderFollowupActions } from '@/components/OrderFollowupActions';
 import { PurchaseTracker } from '@/components/EventTrackers';
 import { formatCurrency } from '@/lib/format';
 import { AGROPAG_EMAIL, AGROPAG_PHONE, AGROPAG_WHATSAPP_INTL } from '@/lib/constants';
 
 export default function ConfirmationPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  const orderId = typeof searchParams?.orderId === 'string' ? searchParams.orderId : '';
   const orderNumber = typeof searchParams?.orderNumber === 'string' ? searchParams.orderNumber : '';
   const total = Number(typeof searchParams?.total === 'string' ? searchParams.total : '0') || 0;
   const payment = typeof searchParams?.payment === 'string' ? searchParams.payment : 'cash';
   const paymentRef = typeof searchParams?.paymentRef === 'string' ? searchParams.paymentRef : '';
+  const phone = typeof searchParams?.phone === 'string' ? searchParams.phone : '';
+  const payerPhone = typeof searchParams?.payerPhone === 'string' ? searchParams.payerPhone : '';
   const isMobileMoney = payment === 'mobile_money';
   const whatsappLink = `https://wa.me/${AGROPAG_WHATSAPP_INTL}?text=${encodeURIComponent(`Bonjour AGROPAG, je confirme la commande #${orderNumber || '...'}.`)}`;
 
@@ -44,9 +48,19 @@ export default function ConfirmationPage({ searchParams }: { searchParams?: Reco
               <p className="mt-2 text-sm text-slate-700">Airtel Money — Code agent : AGROPAG</p>
               <p className="mt-1 text-xs text-slate-500">Moov Money — Code agent : AGROPAG (bientôt disponible)</p>
               <p className="mt-3 text-xs text-slate-600">
-                Après validation de la commande, merci d&apos;effectuer le paiement Airtel Money avec le code agent AGROPAG puis d&apos;ajouter la preuve si ce n&apos;est pas déjà fait.
+                Après validation de la commande, effectuez le paiement Airtel Money avec le code agent AGROPAG puis chargez la preuve juste en dessous.
               </p>
             </div>
+          ) : null}
+          {orderId && orderNumber && phone ? (
+            <OrderFollowupActions
+              orderId={orderId}
+              orderNumber={orderNumber}
+              phone={phone}
+              payment={payment}
+              paymentRef={paymentRef}
+              payerPhone={payerPhone}
+            />
           ) : null}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <a href={`tel:${AGROPAG_PHONE}`} className="btn btn-ghost">Appeler AGROPAG</a>

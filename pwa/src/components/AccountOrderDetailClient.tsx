@@ -79,7 +79,14 @@ export function AccountOrderDetailClient({ orderId }: { orderId: string }) {
 
       <div className="rounded-lg border border-slate-200 p-4">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Statut</p>
-        <p className="text-sm font-semibold text-primary mt-1">{item.status}</p>
+        <p className="text-sm font-semibold text-primary mt-1">{item.status_label || item.status}</p>
+        {item.payment_method === 'mobile_money' ? (
+          <p className="mt-2 text-xs text-slate-500">
+            Mobile Money
+            {item.payment_reference ? ` • Réf. ${item.payment_reference}` : ''}
+            {item.payment_proof_uploaded ? ' • preuve reçue' : ' • preuve en attente'}
+          </p>
+        ) : null}
       </div>
 
       <div>

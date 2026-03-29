@@ -9,21 +9,6 @@ import { formatCurrency, formatLibrevilleDate } from '@/lib/format';
 import { normalizeGabonPhone } from '@/lib/phone';
 import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
 
-function labelStatus(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'Livrée';
-    case 'processing':
-      return 'Préparation';
-    case 'on-hold':
-      return 'En attente';
-    case 'pending':
-      return 'Reçue';
-    default:
-      return status;
-  }
-}
-
 export function AccountOrdersClient() {
   const searchParams = useSearchParams();
   const phoneFromQuery = useMemo(() => String(searchParams.get('phone') || '').trim(), [searchParams]);
@@ -115,7 +100,7 @@ export function AccountOrdersClient() {
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-500">Statut</p>
-              <p className="text-sm font-bold text-primary">{labelStatus(order.status)}</p>
+              <p className="text-sm font-bold text-primary">{order.status_label || order.status}</p>
               <p className="text-sm font-black text-slate-900">{formatCurrency(order.total, order.currency)}</p>
             </div>
           </div>

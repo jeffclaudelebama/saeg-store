@@ -9,13 +9,11 @@ import type { SaegCartItem, SaegCheckoutForm, SaegProduct } from '@/types/saeg';
 interface CheckoutPayload {
   items: SaegCartItem[];
   form: SaegCheckoutForm;
-  paymentProof?: File | null;
 }
 
 interface ParsedRequestBody {
   items: SaegCartItem[];
   form: SaegCheckoutForm;
-  paymentProof: File | null;
 }
 
 function mapPayment(form: SaegCheckoutForm) {
@@ -145,9 +143,7 @@ async function parseBody(request: Request): Promise<ParsedRequestBody | null> {
     } catch {
       return null;
     }
-    const proofEntry = formData.get('payment_proof');
-    const paymentProof = proofEntry instanceof File && proofEntry.size > 0 ? proofEntry : null;
-    return { items, form, paymentProof };
+    return { items, form };
   }
 
   const jsonBody = (await request.json().catch(() => null)) as CheckoutPayload | null;
@@ -157,22 +153,7 @@ async function parseBody(request: Request): Promise<ParsedRequestBody | null> {
   return {
     items: Array.isArray(jsonBody.items) ? jsonBody.items : [],
     form: jsonBody.form,
-    paymentProof: jsonBody.paymentProof ?? null,
   };
-}
-
-function isAllowedProofFile(file: File): boolean {
-  const allowedMime = new Set([
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'application/pdf',
-  ]);
-  if (allowedMime.has(file.type)) {
-    return true;
-  }
-  const lowerName = file.name.toLowerCase();
-  return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp') || lowerName.endsWith('.pdf');
 }
 
 function mobileMoneyNote(reference: string): string {
@@ -195,22 +176,6 @@ async function updateOrderMeta(orderId: number, payload: Array<{ key: string; va
     body: JSON.stringify({
       meta_data: payload,
     }),
-  });
-}
-
-async function uploadPaymentProof(orderId: number, reference: string, payerNumber: string, file: File) {
-  const formData = new FormData();
-  formData.append('proof', file, file.name);
-  formData.append('payment_reference', reference);
-  formData.append('payer_number', payerNumber);
-
-  return wooFetch<{
-    ok: boolean;
-    attachment_id?: number;
-    attachment_url?: string;
-  }>(`/wp-json/saeg/v1/orders/${orderId}/payment-proof`, {
-    method: 'POST',
-    body: formData,
   });
 }
 
@@ -248,15 +213,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Numéro Airtel/Moov invalide. Format attendu: 241XXXXXXXX.' }, { status: 422 });
     }
     form.mobileMoneyPayerNumber = normalizedPayerNumber;
-    if (!parsed.paymentProof) {
-      return NextResponse.json({ error: 'Preuve de paiement requise pour Mobile Money.' }, { status: 422 });
-    }
-    if (!isAllowedProofFile(parsed.paymentProof)) {
-      return NextResponse.json({ error: 'Format de preuve non supporté (image ou PDF uniquement).' }, { status: 422 });
-    }
-    if (parsed.paymentProof.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'La preuve de paiement dépasse 10 MB.' }, { status: 422 });
-    }
   }
 
   const ids = Array.from(new Set(parsed.items.map((i) => i.productId)));
@@ -382,8 +338,6 @@ export async function POST(request: Request) {
     const order = await createWooOrderRaw(orderPayload);
 
     let paymentReference = '';
-    let proofUploadResult: unknown = null;
-    let warning: string | undefined;
 
     if (form.paiement === 'mobile_money') {
       paymentReference = buildMobileMoneyReference(Number(order.id));
@@ -399,23 +353,12 @@ export async function POST(request: Request) {
         Number(order.id),
         `${mobileMoneyNote(paymentReference)} Numéro payeur: ${payerNumber || 'N/A'}`,
       );
-
-      if (parsed.paymentProof) {
-        try {
-          proofUploadResult = await uploadPaymentProof(Number(order.id), paymentReference, payerNumber, parsed.paymentProof);
-        } catch (proofError) {
-          warning = 'Commande créée, mais la preuve n’a pas pu être liée automatiquement.';
-          await createInternalOrderNote(Number(order.id), `Échec liaison preuve Mobile Money: ${String(proofError)}`);
-        }
-      }
     }
 
     return NextResponse.json({
       ok: true,
       order,
       paymentReference,
-      paymentProof: proofUploadResult,
-      warning,
       validation,
     });
   } catch (error) {

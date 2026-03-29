@@ -53,7 +53,7 @@ export function TrackingPageClient() {
           <div className="h-full min-h-[240px] flex items-center justify-center text-center text-slate-500">
             <div>
               <p className="text-sm font-semibold">Statuts</p>
-              <p className="mt-2 text-xs">Reçue → Préparation → En route → Livrée</p>
+              <p className="mt-2 text-xs">Le suivi reflète maintenant les statuts WooCommerce réels: attente, vérification Mobile Money, préparation, en route, livrée ou annulée.</p>
             </div>
           </div>
         ) : (
@@ -70,9 +70,11 @@ export function TrackingPageClient() {
             </div>
             <ol className="space-y-3">
               {result.timeline?.map((step) => (
-                <li key={step.code} className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${step.done ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-white'}`}>
-                  <span className={`material-symbols-outlined ${step.done ? 'text-primary' : 'text-slate-300'}`}>{step.done ? 'check_circle' : 'radio_button_unchecked'}</span>
-                  <span className={`font-semibold ${step.done ? 'text-primary' : 'text-slate-500'}`}>{step.label}</span>
+                <li key={step.code} className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${step.active || step.done ? 'border-primary/20 bg-primary/5' : 'border-slate-200 bg-white'}`}>
+                  <span className={`material-symbols-outlined ${step.active || step.done ? 'text-primary' : 'text-slate-300'}`}>
+                    {step.done ? 'check_circle' : step.active ? 'schedule' : 'radio_button_unchecked'}
+                  </span>
+                  <span className={`font-semibold ${step.active || step.done ? 'text-primary' : 'text-slate-500'}`}>{step.label}</span>
                 </li>
               ))}
             </ol>

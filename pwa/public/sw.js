@@ -71,3 +71,45 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    return;
+  }
+
+  const payload = event.data.json();
+  const title = payload.title || 'AGROPAG';
+  const options = {
+    body: payload.body || 'Le statut de votre commande a changé.',
+    icon: '/icons/pwa-192.png',
+    badge: '/icons/pwa-192.png',
+    data: {
+      url: payload.url || '/suivi',
+      ...(payload.data || {}),
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const destination = event.notification.data?.url || '/suivi';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.navigate(destination);
+          return client.focus();
+        }
+      }
+
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(destination);
+      }
+
+      return undefined;
+    })
+  );
+});

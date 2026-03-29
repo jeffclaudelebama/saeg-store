@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasWooEnv } from '@/lib/env';
+import { getOrderMetaSummary, getOrderStatusView } from '@/lib/order-status';
 import { normalizeGabonPhone } from '@/lib/phone';
 import { wooFetch } from '@/lib/server/woo';
 import type { SaegOrderListItem, SaegOrdersResponse } from '@/types/saeg';
@@ -22,6 +23,10 @@ type WooOrder = {
     quantity?: number;
     total?: string;
   }>;
+  meta_data?: Array<{
+    key?: string;
+    value?: unknown;
+  }>;
 };
 
 const WOO_PER_PAGE = 100;
@@ -33,15 +38,28 @@ function isInvalidWooPageError(error: unknown): boolean {
 }
 
 function mapOrder(order: WooOrder): SaegOrderListItem {
+  const meta = getOrderMetaSummary(order.meta_data);
+  const statusView = getOrderStatusView({
+    status: order.status,
+    paymentMethod: meta.paymentMethod,
+    mobileMoneyStatus: meta.mobileMoneyStatus,
+  });
+
   return {
     id: Number(order.id),
     number: String(order.number || order.id),
     date_created: order.date_created,
     status: String(order.status || 'pending'),
+    status_label: statusView.label,
+    tracking_status: statusView.code,
     total: Number(order.total || 0),
     currency: String(order.currency || 'XAF'),
     billing_name: [order.billing?.first_name, order.billing?.last_name].filter(Boolean).join(' ').trim() || 'Client AGROPAG',
     billing_phone: String(order.billing?.phone || ''),
+    payment_method: meta.paymentMethod,
+    payment_reference: meta.paymentReference,
+    mobile_money_status: meta.mobileMoneyStatus,
+    payment_proof_uploaded: meta.paymentProofUploaded,
     line_items: (order.line_items || []).map((item) => ({
       product_id: Number(item.product_id || 0),
       name: String(item.name || 'Produit'),

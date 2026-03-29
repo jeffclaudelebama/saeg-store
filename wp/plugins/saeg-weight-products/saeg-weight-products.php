@@ -29,6 +29,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
         private const ORDER_META_MOBILE_MONEY_PROOF_ID = 'saeg_mobile_money_proof_id';
         private const ORDER_META_MOBILE_MONEY_STATUS = 'saeg_mobile_money_status';
         private const ORDER_META_MOBILE_MONEY_PAID_AT = 'saeg_mobile_money_paid_at';
+        private const ORDER_META_PUSH_SUBSCRIPTIONS = 'saeg_push_subscriptions';
         private const DASHBOARD_DISCOUNT_NONCE = 'saeg_apply_daily_discount';
         private const MARK_MOBILE_MONEY_PAID_ACTION = 'saeg_mark_mobile_money_paid';
         private const REST_NAMESPACE = 'saeg/v1';
@@ -75,6 +76,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
             add_action('woocommerce_order_status_processing', [__CLASS__, 'reduce_stock_on_processing']);
             add_action('woocommerce_order_status_cancelled', [__CLASS__, 'restore_stock_on_cancelled']);
             add_action('woocommerce_order_status_failed', [__CLASS__, 'restore_stock_on_cancelled']);
+            add_action('woocommerce_order_status_changed', [__CLASS__, 'notify_order_status_change'], 20, 4);
 
             add_filter('manage_edit-product_columns', [__CLASS__, 'add_admin_columns']);
             add_action('manage_product_posts_custom_column', [__CLASS__, 'render_admin_columns'], 10, 2);
@@ -1107,6 +1109,112 @@ if (!class_exists('AGROPAG_Weight_Products')) {
 
             wp_safe_redirect($order->get_edit_order_url());
             exit;
+        }
+
+        private static function get_push_webhook_url(): string {
+            if (defined('AGROPAG_PUSH_WEBHOOK_URL')) {
+                return (string) AGROPAG_PUSH_WEBHOOK_URL;
+            }
+
+            $value = getenv('AGROPAG_PUSH_WEBHOOK_URL');
+            return is_string($value) ? trim($value) : '';
+        }
+
+        private static function get_push_webhook_secret(): string {
+            if (defined('AGROPAG_PUSH_WEBHOOK_SECRET')) {
+                return (string) AGROPAG_PUSH_WEBHOOK_SECRET;
+            }
+
+            $value = getenv('AGROPAG_PUSH_WEBHOOK_SECRET');
+            return is_string($value) ? trim($value) : '';
+        }
+
+        private static function get_order_status_label(WC_Order $order, string $status): string {
+            $payment_method = (string) $order->get_meta('saeg_paiement', true);
+            $mobile_money_status = (string) $order->get_meta(self::ORDER_META_MOBILE_MONEY_STATUS, true);
+
+            switch ($status) {
+                case 'completed':
+                    return 'Livrée';
+                case 'processing':
+                    return 'Préparation';
+                case 'saeg_en_route':
+                case 'en-route':
+                    return 'En route';
+                case 'on-hold':
+                    if ($payment_method === 'mobile_money') {
+                        return $mobile_money_status === 'paid' ? 'Paiement validé' : 'Paiement à vérifier';
+                    }
+                    return 'En attente de confirmation';
+                case 'cancelled':
+                    return 'Commande annulée';
+                case 'failed':
+                    return 'Paiement échoué';
+                case 'refunded':
+                    return 'Commande remboursée';
+                case 'pending':
+                default:
+                    return 'Commande reçue';
+            }
+        }
+
+        public static function notify_order_status_change($order_id, $from_status, $to_status, $order): void {
+            if (!is_a($order, 'WC_Order')) {
+                $order = wc_get_order((int) $order_id);
+            }
+            if (!$order) {
+                return;
+            }
+
+            $subscriptions_raw = (string) $order->get_meta(self::ORDER_META_PUSH_SUBSCRIPTIONS, true);
+            if ($subscriptions_raw === '') {
+                return;
+            }
+
+            $subscriptions = json_decode($subscriptions_raw, true);
+            if (!is_array($subscriptions) || count($subscriptions) === 0) {
+                return;
+            }
+
+            $webhook_url = self::get_push_webhook_url();
+            if ($webhook_url === '') {
+                return;
+            }
+
+            $payload = [
+                'orderId' => (int) $order->get_id(),
+                'orderNumber' => (string) $order->get_order_number(),
+                'statusLabel' => self::get_order_status_label($order, (string) $to_status),
+                'customerName' => trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()),
+                'orderUrl' => 'https://boutique.agropag.ga/suivi',
+                'subscriptions' => $subscriptions,
+            ];
+
+            $headers = [
+                'Content-Type' => 'application/json',
+            ];
+
+            $secret = self::get_push_webhook_secret();
+            if ($secret !== '') {
+                $headers['x-agropag-webhook-secret'] = $secret;
+            }
+
+            $response = wp_remote_post($webhook_url, [
+                'timeout' => 15,
+                'headers' => $headers,
+                'body' => wp_json_encode($payload),
+                'data_format' => 'body',
+            ]);
+
+            if (is_wp_error($response)) {
+                $order->add_order_note('Échec notification push commande: ' . $response->get_error_message(), false);
+                return;
+            }
+
+            $code = (int) wp_remote_retrieve_response_code($response);
+            if ($code >= 400) {
+                $order->add_order_note('Échec notification push commande: HTTP ' . $code, false);
+            }
         }
 
         private static function collect_order_weight_quantities(WC_Order $order): array {

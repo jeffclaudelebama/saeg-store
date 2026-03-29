@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   applicationName: APP_NAME,
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
+    icon: '/icons/pwa-192.png',
+    shortcut: '/icons/pwa-192.png',
     apple: '/apple-touch-icon.png',
   },
   openGraph: {

@@ -119,7 +119,7 @@ export interface SaegCartValidationResult {
 export interface SaegTrackingResponse {
   found: boolean;
   orderNumber?: string;
-  status?: 'recue' | 'preparation' | 'en_route' | 'livree';
+  status?: string;
   statusLabel?: string;
   createdAt?: string;
   customerPhone?: string;
@@ -127,7 +127,7 @@ export interface SaegTrackingResponse {
   total?: number;
   deliveryMode?: SaegDeliveryMode;
   commune?: string;
-  timeline?: Array<{ code: string; label: string; done: boolean }>;
+  timeline?: Array<{ code: string; label: string; done: boolean; active?: boolean }>;
   message?: string;
 }
 
@@ -136,10 +136,16 @@ export interface SaegOrderListItem {
   number: string;
   date_created?: string;
   status: string;
+  status_label?: string;
+  tracking_status?: string;
   total: number;
   currency: string;
   billing_name: string;
   billing_phone: string;
+  payment_method?: string;
+  payment_reference?: string;
+  mobile_money_status?: string;
+  payment_proof_uploaded?: boolean;
   line_items: Array<{
     product_id: number;
     name: string;
