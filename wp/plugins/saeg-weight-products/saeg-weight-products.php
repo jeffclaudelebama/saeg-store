@@ -1659,7 +1659,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
             return (int) $row->user_id;
         }
 
-        private static function register_whatsapp_lead_post_type(): void {
+        public static function register_whatsapp_lead_post_type(): void {
             register_post_type(self::WHATSAPP_LEAD_POST_TYPE, [
                 'labels' => [
                     'name' => __('Leads WhatsApp AGROPAG', 'saeg-weight-products'),
@@ -1674,7 +1674,7 @@ if (!class_exists('AGROPAG_Weight_Products')) {
             ]);
         }
 
-        private static function register_account_post_types(): void {
+        public static function register_account_post_types(): void {
             register_post_type(self::CUSTOMER_PROFILE_POST_TYPE, [
                 'labels' => [
                     'name' => __('Profils clients AGROPAG', 'saeg-weight-products'),
